@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/controlPanel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#EEEEEE"
+    android:padding="12dp">
+
+    <!-- 字体大小 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="4dp">
+        <Button
+            android:id="@+id/btnFontSizeDecrease"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="A-" />
+        <Button
+            android:id="@+id/btnFontSizeIncrease"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="A+" />
+    </LinearLayout>
+
+    <!-- 语速设置 -->
+    <RadioGroup
+        android:id="@+id/radioSpeed"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingTop="8dp"
+    >
+
+        <RadioButton
+            android:id="@+id/radio05x"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0.5x" />
+        <RadioButton
+            android:id="@+id/radio10x"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="1.0x"
+            android:checked="true" />
+        <RadioButton
+            android:id="@+id/radio15x"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="1.5x" />
+        <RadioButton
+            android:id="@+id/radio20x"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="2.0x" />
+    </RadioGroup>
+
+
+
+    <!-- 亮度调节 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="亮度"
+        android:layout_marginTop="8dp" />
+    <SeekBar
+        android:id="@+id/seekBarBrightness"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <!-- 定时退出 -->
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical">
+
+        <RadioGroup
+            android:id="@+id/radioExitTimer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/radio120min"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="120" />
+            <RadioButton
+                android:id="@+id/radio60min"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="60" />
+            <RadioButton
+                android:id="@+id/radio30min"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="30" />
+            <RadioButton
+                android:id="@+id/radio10min"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="10" />
+        </RadioGroup>
+
+        <TextView
+            android:id="@+id/labelExitHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="分钟后退出"
+            android:paddingStart="8dp" />
+    </LinearLayout>
+
+
+    <!-- 主题切换 -->
+    <Button
+        android:id="@+id/btnThemeToggle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="反白"
+        android:layout_marginTop="8dp" />
+
+
+
+    <!-- 字体选择 -->
+    <Button
+        android:id="@+id/btnFontSelect"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="选择字体"
+        android:layout_marginTop="4dp" />
+
+    <!-- 预留按钮，暂时隐藏 -->
+    <Button
+        android:id="@+id/btnQuickStyle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="快速样式"
+        android:visibility="gone"
+        android:layout_marginTop="4dp" />
+    <!-- 简繁转换 -->
+    <Button
+        android:id="@+id/btnConvert"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:text="简繁转换"
+        android:layout_marginTop="4dp" />
+
+</LinearLayout>
