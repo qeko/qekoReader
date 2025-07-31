@@ -119,6 +119,8 @@ public class MainActivity extends Activity {
                 Toast.makeText(this, "📚 共找到 " + allDocs.size() + " 本书", Toast.LENGTH_SHORT).show();
             });
         }).start();
+
+        loadCachedFolders();
     }
 
     private void openFile(File file) {
