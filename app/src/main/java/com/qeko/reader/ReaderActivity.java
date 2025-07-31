@@ -109,7 +109,6 @@ public class ReaderActivity extends AppCompatActivity {
         setupSeekBar();
         setupTouchControl();
         btnTTS.setOnClickListener(v -> toggleSpeaking());
-
     }
 
 

@@ -85,7 +85,7 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
         if (item.isLastRead()) {
             holder.itemView.setBackgroundColor(Color.parseColor("#D0F0C0")); // 浅绿色
         }
-        
+
 /*        if (item.isLastRead()) {
             holder.icon.setVisibility(View.VISIBLE);
             holder.title.setTextColor(Color.RED);

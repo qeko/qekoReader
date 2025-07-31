@@ -6,8 +6,19 @@
     android:orientation="vertical"
     android:padding="8dp"
     android:background="@android:color/white">
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center">
 
-    <!-- 顶部标题/按钮 -->
+        <Button android:id="@+id/btnBooks" android:text="📚 书籍"   android:layout_width="match_parent"     android:layout_height="match_parent"      android:layout_weight="1"/>
+        <Button android:id="@+id/btnImages" android:text="🖼️ 图片"    android:layout_width="match_parent"    android:layout_height="match_parent"     android:layout_weight="1"/>
+        <Button android:id="@+id/btnMusic" android:text="🎵 音乐"   android:layout_width="match_parent"    android:layout_height="match_parent"      android:layout_weight="1"/>
+        <Button android:id="@+id/btnVideo" android:text="🎬 视频"   android:layout_width="match_parent"    android:layout_height="match_parent"      android:layout_weight="1"/>
+    </LinearLayout>
+
+<!--    &lt;!&ndash; 顶部标题/按钮 &ndash;&gt;
     <TextView
         android:id="@+id/tv"
         android:layout_width="match_parent"
@@ -17,7 +28,7 @@
         android:gravity="center"
         android:textColor="@android:color/black"
         android:padding="12dp"
-        android:background="@android:color/darker_gray" />
+        android:background="@android:color/darker_gray" />-->
 
 
     <!-- RecyclerView 展示目录/文档结构 -->

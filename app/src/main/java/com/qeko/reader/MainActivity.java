@@ -1,8 +1,10 @@
 package com.qeko.reader;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -15,6 +17,8 @@ import android.widget.Toast;
 import android.app.Activity;
 
 import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -23,18 +27,22 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.qeko.unit.FileAdapter;
 import com.qeko.unit.FileItem;
 import com.qeko.unit.FileUtils;
+import com.qeko.unit.ScanCacheManager;
 
 import java.io.File;
 import java.util.*;
 
 public class MainActivity extends Activity {
-
+    private static final int REQUEST_STORAGE_PERMISSION = 1001;
     private RecyclerView recyclerView;
     private FileAdapter adapter;
     private List<FileItem> displayItems = new ArrayList<>();
     private Map<File, List<File>> folderMap = new HashMap<>();
-    private static final String PREFS_NAME = "reader_prefs";
+    private static final String PREFS_NAME = "scan_cache";
     private static final String LAST_FILE_PATH = "lastFilePath";
+    private Button btnBooks, btnImages, btnMusic, btnVideo;
+    private FileTypeStrategy currentStrategy;
+    private String currentCacheKey;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,10 +52,21 @@ public class MainActivity extends Activity {
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        loadCachedFolders();
+
 
         adapter = new FileAdapter(displayItems);
         recyclerView.setAdapter(adapter);
+        btnBooks = findViewById(R.id.btnBooks);
+        btnImages = findViewById(R.id.btnImages);
+        btnMusic = findViewById(R.id.btnMusic);
+        btnVideo = findViewById(R.id.btnVideo);
+
+        btnBooks.setOnClickListener(v -> switchCategory(new BookFileStrategy(), "BOOK_DIRS"));
+        btnImages.setOnClickListener(v -> switchCategory(new ImageFileStrategy(), "IMAGE_DIRS"));
+        btnMusic.setOnClickListener(v -> switchCategory(new MusicFileStrategy(), "MUSIC_DIRS"));
+        btnVideo.setOnClickListener(v -> switchCategory(new VideoFileStrategy(), "VIDEO_DIRS"));
+
+        ensureStoragePermission();
 
         adapter.setOnItemClickListener(item -> {
             if (item.isFolder()) {
@@ -71,7 +90,10 @@ public class MainActivity extends Activity {
             }
         }).attachToRecyclerView(recyclerView);
 
-        findViewById(R.id.btnScan).setOnClickListener(v -> {
+        Button btnScan = findViewById(R.id.btnScan);
+        btnScan.setOnClickListener(v -> scanDocuments());
+
+/*        findViewById(R.id.btnScan).setOnClickListener(v -> {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 if (!Environment.isExternalStorageManager()) {
                     startActivity(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION));
@@ -82,45 +104,192 @@ public class MainActivity extends Activity {
                         Manifest.permission.READ_EXTERNAL_STORAGE,
                         Manifest.permission.WRITE_EXTERNAL_STORAGE
                 }, 1);
+
+
             }
-            scanDocuments();
+
+            // 默认显示书籍
+            switchCategory(new BookFileStrategy(), "BOOK_DIRS");
+        });*/
+    }
+
+
+    public List<File> reloadWithStrategy(Context context, FileTypeStrategy strategy, String cacheKey) {
+        Set<String> cachedDirs = ScanCacheManager.getCachedDirs(context, cacheKey);
+        Set<String> updatedDirs = new HashSet<>();
+        List<File> result = new ArrayList<>();
+
+        for (String path : cachedDirs) {
+            File dir = new File(path);
+            List<File> files = FileUtils.scanFilesIn(dir, strategy); // 不递归
+            if (!files.isEmpty()) {
+                updatedDirs.add(path);
+                result.addAll(files);
+            }
+        }
+
+        // 更新缓存（去掉已无文档的目录）
+        ScanCacheManager.saveCachedDirs(context, cacheKey, updatedDirs);
+        return result;
+    }
+    private void ensureStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                startActivity(intent);
+            }
+        } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                        REQUEST_STORAGE_PERMISSION);
+            }
+        }
+    }
+
+/*
+    private void reloadWithStrategy(FileTypeStrategy strategy) {
+        File root = Environment.getExternalStorageDirectory();
+        List<File> filteredFiles = FileUtils.scanAll(root, strategy);
+        folderMap.clear();
+        for (File file : filteredFiles) {
+            File parent = file.getParentFile();
+            folderMap.computeIfAbsent(parent, k -> new ArrayList<>()).add(file);
+        }
+        displayItems.clear();
+        for (Map.Entry<File, List<File>> entry : folderMap.entrySet()) {
+            File folder = entry.getKey();
+            List<File> files = entry.getValue();
+            FileItem folderItem = new FileItem(folder, true);
+            folderItem.setExpanded(true);
+            List<FileItem> children = new ArrayList<>();
+            for (File f : files) {
+                FileItem item = new FileItem(f, false);
+                children.add(item);
+            }
+            folderItem.setChildren(children);
+            displayItems.add(folderItem);
+        }
+        adapter.setItems(displayItems);
+    }
+*/
+
+    private void switchCategory(FileTypeStrategy strategy, String cacheKey) {
+        this.currentStrategy = strategy;
+        this.currentCacheKey = cacheKey;
+        List<File> files = FileUtils.reloadWithStrategy(this, strategy, cacheKey);
+
+        showFiles(files);
+    }
+
+    private void showFiles(List<File> files) {
+        folderMap.clear();
+        for (File file : files) {
+            File parent = file.getParentFile();
+            folderMap.computeIfAbsent(parent, k -> new ArrayList<>()).add(file);
+        }
+
+        displayItems.clear();
+        for (Map.Entry<File, List<File>> entry : folderMap.entrySet()) {
+            File folder = entry.getKey();
+            List<File> filesInFolder = entry.getValue();
+
+            FileItem folderItem = new FileItem(folder, true);
+            folderItem.setDocumentCount(filesInFolder.size());
+            folderItem.setExpanded(true);
+
+            List<FileItem> childItems = new ArrayList<>();
+            for (File f : filesInFolder) {
+                FileItem item = new FileItem(f, false);
+                childItems.add(item);
+            }
+            folderItem.setChildren(childItems);
+            displayItems.add(folderItem);
+        }
+
+        adapter = new FileAdapter(displayItems);
+        recyclerView.setAdapter(adapter);
+
+        adapter.setOnItemClickListener(item -> {
+            if (item.isFolder()) {
+                item.setExpanded(!item.isExpanded());
+                adapter.refreshDisplayItems();
+            } else {
+                openFile(item.getFile());
+            }
         });
     }
 
+
     private void scanDocuments() {
-        Toast.makeText(this, "📖 正在扫描...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "正在扫描，请稍候...", Toast.LENGTH_SHORT).show();
         new Thread(() -> {
-            List<File> allDocs = FileUtils.scanAll(Environment.getExternalStorageDirectory());
-            folderMap.clear();
-            for (File file : allDocs) {
-                File parent = file.getParentFile();
-                folderMap.computeIfAbsent(parent, k -> new ArrayList<>()).add(file);
+            // 初始化四类策略及其对应缓存键
+            Map<FileTypeStrategy, String> strategyMap = new HashMap<>();
+            strategyMap.put(new BookFileStrategy(), "BOOK_DIRS");
+            strategyMap.put(new ImageFileStrategy(), "IMAGE_DIRS");
+            strategyMap.put(new MusicFileStrategy(), "MUSIC_DIRS");
+            strategyMap.put(new VideoFileStrategy(), "VIDEO_DIRS");
+
+            // 初始化缓存结果结构
+            Map<String, List<File>> resultDirs = new HashMap<>();
+            for (String key : strategyMap.values()) {
+                resultDirs.put(key, new ArrayList<>());
             }
 
-            displayItems.clear();
-            for (Map.Entry<File, List<File>> entry : folderMap.entrySet()) {
-                File folder = entry.getKey();
-                List<File> files = entry.getValue();
+            // 一次遍历扫描
+            scanAndClassify();
 
-                FileItem folderItem = new FileItem(folder, true);
-                folderItem.setDocumentCount(files.size());
-                folderItem.setExpanded(true); // 默认展开
-
-                List<FileItem> childItems = new ArrayList<>();
-                for (File f : files) {
-                    childItems.add(new FileItem(f, false));
-                }
-                folderItem.setChildren(childItems);
-                displayItems.add(folderItem);
-            }
 
             runOnUiThread(() -> {
-                adapter.setItems(displayItems);
-                Toast.makeText(this, "📚 共找到 " + allDocs.size() + " 本书", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "扫描完成", Toast.LENGTH_SHORT).show();
+                switchCategory(currentStrategy, currentCacheKey);
             });
         }).start();
+    }
 
-        loadCachedFolders();
+
+    private void scanAndClassify() {
+        File root = Environment.getExternalStorageDirectory();
+        Map<String, List<String>> categoryDirs = new HashMap<>();
+        categoryDirs.put("BOOK_DIRS", new ArrayList<>());
+        categoryDirs.put("IMAGE_DIRS", new ArrayList<>());
+        categoryDirs.put("MUSIC_DIRS", new ArrayList<>());
+        categoryDirs.put("VIDEO_DIRS", new ArrayList<>());
+
+        scanDirectoryRecursive(root, categoryDirs);
+
+        FileUtils.saveCategoryDirs(this, categoryDirs);
+//        Toast.makeText(this, "分类目录扫描完成", Toast.LENGTH_SHORT).show();
+    }
+
+
+    private void scanDirectoryRecursive(File dir, Map<String, List<String>> categoryDirs) {
+        if (dir == null || !dir.isDirectory() || dir.isHidden()) return;
+
+        // 🧠 判断是否包含目标类型文件
+        if (FileUtils.countMatchingFiles(dir, new BookFileStrategy()) > 0) {
+            categoryDirs.get("BOOK_DIRS").add(dir.getAbsolutePath());
+        }
+        if (FileUtils.countMatchingFiles(dir, new ImageFileStrategy()) > 0) {
+            categoryDirs.get("IMAGE_DIRS").add(dir.getAbsolutePath());
+        }
+        if (FileUtils.countMatchingFiles(dir, new MusicFileStrategy()) > 0) {
+            categoryDirs.get("MUSIC_DIRS").add(dir.getAbsolutePath());
+        }
+        if (FileUtils.countMatchingFiles(dir, new VideoFileStrategy()) > 0) {
+            categoryDirs.get("VIDEO_DIRS").add(dir.getAbsolutePath());
+        }
+
+        File[] children = dir.listFiles();
+        if (children != null) {
+            for (File child : children) {
+                if (child.isDirectory()) {
+                    scanDirectoryRecursive(child, categoryDirs); // 🔁 递归
+                }
+            }
+        }
     }
 
     private void openFile(File file) {
@@ -133,9 +302,9 @@ public class MainActivity extends Activity {
     }
 
 
-    private void loadCachedFolders() {
+    private void loadCachedFolders(FileTypeStrategy strategy) {
         File root = Environment.getExternalStorageDirectory();
-        List<File> cachedFiles = FileUtils.scanAll(root);
+        List<File> cachedFiles = FileUtils.scanAll(root, strategy);
         folderMap.clear();
 
         // 读取上次阅读路径
@@ -191,109 +360,4 @@ public class MainActivity extends Activity {
     }
 
 
-/*
-    private void loadCachedFolders() {
-        File root = Environment.getExternalStorageDirectory();
-        List<File> cachedFiles = FileUtils.scanAll(root);
-        folderMap.clear();
-
-        // 读取上次阅读路径
-        String lastPath = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                .getString(LAST_FILE_PATH, "");
-
-        for (File file : cachedFiles) {
-            File parent = file.getParentFile();
-            folderMap.computeIfAbsent(parent, k -> new ArrayList<>()).add(file);
-        }
-
-        displayItems.clear();
-        for (Map.Entry<File, List<File>> entry : folderMap.entrySet()) {
-            File folder = entry.getKey();
-            List<File> files = entry.getValue();
-
-            FileItem folderItem = new FileItem(folder, true);
-            folderItem.setDocumentCount(files.size());
-            folderItem.setExpanded(true);
-
-            List<FileItem> childItems = new ArrayList<>();
-            for (File f : files) {
-                FileItem item = new FileItem(f, false);
-
-                if (f.getAbsolutePath().equals(lastPath)) {
-                    item.setLastRead(true);
-                }
-
-                childItems.add(item);
-            }
-            folderItem.setChildren(childItems);
-            displayItems.add(folderItem);
-        }
-    }
-*/
-
-/*
-    private void loadCachedFolders() {
-        File root = Environment.getExternalStorageDirectory();
-        List<File> cachedFiles = FileUtils.scanAll(root);
-        folderMap.clear();
-
-        for (File file : cachedFiles) {
-            File parent = file.getParentFile();
-            folderMap.computeIfAbsent(parent, k -> new ArrayList<>()).add(file);
-        }
-
-        displayItems.clear();
-        for (Map.Entry<File, List<File>> entry : folderMap.entrySet()) {
-            File folder = entry.getKey();
-            List<File> files = entry.getValue();
-
-            FileItem folderItem = new FileItem(folder, true);
-            folderItem.setDocumentCount(files.size());
-            folderItem.setExpanded(true);
-
-            List<FileItem> childItems = new ArrayList<>();
-            for (File f : files) {
-                FileItem item = new FileItem(f, false);
-                childItems.add(item);
-            }
-            folderItem.setChildren(childItems);
-            displayItems.add(folderItem);
-        }
-    }
-*/
-
-/*     private void loadCachedFolders() {
-        String lastPath = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                .getString(LAST_FILE_PATH, "");
-
-        List<File> cachedFiles = FileUtils.scanAll(Environment.getExternalStorageDirectory());
-        folderMap.clear();
-        for (File file : cachedFiles) {
-            File parent = file.getParentFile();
-            folderMap.computeIfAbsent(parent, k -> new ArrayList<>()).add(file);
-        }
-
-        displayItems.clear();
-        for (Map.Entry<File, List<File>> entry : folderMap.entrySet()) {
-            File folder = entry.getKey();
-            List<File> files = entry.getValue();
-
-            FileItem folderItem = new FileItem(folder, true);
-            folderItem.setDocumentCount(files.size());
-            folderItem.setExpanded(true);
-
-            List<FileItem> childItems = new ArrayList<>();
-            for (File f : files) {
-                FileItem item = new FileItem(f, false);
-                if (f.getAbsolutePath().equals(lastPath)) {
-                    item.setLastRead(true);
-                }
-                childItems.add(item);
-            }
-            folderItem.setChildren(childItems);
-            displayItems.add(folderItem);
-        }
-
-        adapter.setItems(displayItems);
-    }*/
 }
