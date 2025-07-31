@@ -77,6 +77,15 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
         }
 
 
+        // ✅ 设置隔行背景色
+        int backgroundColor = (position % 2 == 0) ? Color.parseColor("#FFFFFF") : Color.parseColor("#F5F5F5");
+        holder.itemView.setBackgroundColor(backgroundColor);
+
+        // ✅ 选中项高亮
+        if (item.isLastRead()) {
+            holder.itemView.setBackgroundColor(Color.parseColor("#D0F0C0")); // 浅绿色
+        }
+        
 /*        if (item.isLastRead()) {
             holder.icon.setVisibility(View.VISIBLE);
             holder.title.setTextColor(Color.RED);
