@@ -6,7 +6,7 @@ import java.io.File;
 
 // ImageFileStrategy.java
 public class ImageFileStrategy implements FileTypeStrategy {
-    private static final String[] EXTENSIONS = {"jpg", "png", "gif"};
+    private static final String[] EXTENSIONS = {"jpg", "png", "bmp", "jpeg", "gif"};
 
     @Override
     public boolean accept(File file) {

@@ -12,7 +12,9 @@ public class FileItem {
     private boolean isLastRead = false;
     private int documentCount = 0;
     private List<FileItem> children;
-
+    private int pageCount;
+    private int charsPerPage;
+    private boolean pinned;
     public FileItem(File file, boolean isFolder) {
         this.file = file;
         this.isFolder = isFolder;
@@ -56,5 +58,31 @@ public class FileItem {
 
     public void setChildren(List<FileItem> children) {
         this.children = children;
+    }
+
+
+
+    public void setPageCount(int pageCount) {
+        this.pageCount = pageCount;
+    }
+
+    public int getPageCount() {
+        return pageCount;
+    }
+
+    public void setCharsPerPage(int charsPerPage) {
+        this.charsPerPage = charsPerPage;
+    }
+
+    public int getCharsPerPage() {
+        return charsPerPage;
+    }
+
+    public void setPinned(boolean pinned) {
+        this.pinned = pinned;
+    }
+
+    public boolean isPinned() {
+        return pinned;
     }
 }

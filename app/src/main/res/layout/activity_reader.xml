@@ -11,6 +11,7 @@
         android:layout_height="match_parent"
         android:textColor="#222"
         android:padding="16dp"
+        android:lineSpacingExtra="5dp"
         android:textSize="18sp" />
 
     <!-- 控制条浮层区域（你上面这段布局放这里）-->

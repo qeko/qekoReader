@@ -24,6 +24,8 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.qeko.openers.FileOpener;
+import com.qeko.openers.FileOpenerFactory;
 import com.qeko.unit.FileAdapter;
 import com.qeko.unit.FileItem;
 import com.qeko.unit.FileUtils;
@@ -73,7 +75,9 @@ public class MainActivity extends Activity {
                 item.setExpanded(!item.isExpanded());
                 adapter.refreshDisplayItems();
             } else {
-                openFile(item.getFile());
+//                openFile(item.getFile());
+                FileOpener opener = FileOpenerFactory.getOpener(item.getFile().getName());
+                opener.open(this, item.getFile());
             }
         });
 
@@ -293,23 +297,47 @@ public class MainActivity extends Activity {
     }
 
     private void openFile(File file) {
+
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                 .edit().putString(LAST_FILE_PATH, file.getAbsolutePath()).apply();
 
-        Intent intent = new Intent(this, ReaderActivity.class);
-        intent.putExtra("filePath", file.getAbsolutePath());
-        startActivity(intent);
-    }
+
+            String name = file.getName().toLowerCase();
+
+            Intent intent = null;
+
+            if (name.endsWith(".txt")) {
+                intent = new Intent(this, ReaderActivity.class);
+            } else if (name.endsWith(".pdf")) {
+                intent = new Intent(this, PdfReaderActivity.class);
+            } else if (name.endsWith(".epub")) {
+                intent = new Intent(this, EpubReaderActivity.class);  // 需实现
+            } else if (name.endsWith(".mobi")) {
+                intent = new Intent(this, MobiReaderActivity.class);  // 需实现
+            } else if (name.endsWith(".azw") || name.endsWith(".azw3")) {
+                intent = new Intent(this, KindleReaderActivity.class); // 需实现
+            } else if (name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".flac")) {
+                intent = new Intent(this, MusicPlayerActivity.class);
+            } else if (name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".avi") || name.endsWith(".mpg")) {
+                intent = new Intent(this, VideoPlayerActivity.class);
+            } else if (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || name.endsWith(".bmp") || name.endsWith(".gif")) {
+                intent = new Intent(this, ImageViewerActivity.class);
+            }
+
+            if (intent != null) {
+                intent.putExtra("filePath", file.getAbsolutePath());
+                startActivity(intent);
+            } else {
+                Toast.makeText(this, "无法打开该类型的文件: " + name, Toast.LENGTH_SHORT).show();
+            }
+        }
 
 
-    private void loadCachedFolders(FileTypeStrategy strategy) {
+/*
+    private void loadCachedFolders() {
         File root = Environment.getExternalStorageDirectory();
-        List<File> cachedFiles = FileUtils.scanAll(root, strategy);
+        List<File> cachedFiles = FileUtils.scanAll(root);
         folderMap.clear();
-
-        // 读取上次阅读路径
-        String lastPath = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                .getString(LAST_FILE_PATH, "");
 
         for (File file : cachedFiles) {
             File parent = file.getParentFile();
@@ -330,7 +358,7 @@ public class MainActivity extends Activity {
 
             for (File f : files) {
                 FileItem item = new FileItem(f, false);
-                if (f.getAbsolutePath().equals(lastPath)) {
+                if (f.getAbsolutePath().equals(lastFilePath)) {
                     item.setLastRead(true);
                     lastReadItem = item;
                 }
@@ -358,6 +386,20 @@ public class MainActivity extends Activity {
             }
         }
     }
+*/
 
 
-}
+    }
+
+    /*
+
+    private void openFile(File file) {
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .edit().putString(LAST_FILE_PATH, file.getAbsolutePath()).apply();
+
+        Intent intent = new Intent(this, ReaderActivity.class);
+        intent.putExtra("filePath", file.getAbsolutePath());
+        startActivity(intent);
+    }
+*/
+

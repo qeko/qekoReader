@@ -1,19 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- activity_pdf_reader.xml -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical" android:layout_width="match_parent"
-    android:layout_height="match_parent" android:padding="12dp">
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
 
-    <ScrollView android:layout_width="match_parent" android:layout_height="0dp"
-        android:layout_weight="1" android:id="@+id/scrollView">
+    <com.github.barteksc.pdfviewer.PDFView
+        android:id="@+id/pdfView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
-        <LinearLayout android:id="@+id/llTextLines"
-            android:orientation="vertical"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-    </ScrollView>
-
-    <Button
-        android:id="@+id/btnRead"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="开始朗读" />
 </LinearLayout>
+
+
+
+
+
+

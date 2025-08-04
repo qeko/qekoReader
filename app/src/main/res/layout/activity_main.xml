@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:gravity="center">
 
-        <Button android:id="@+id/btnBooks" android:text="📚 书籍"   android:layout_width="match_parent"     android:layout_height="match_parent"      android:layout_weight="1"/>
+        <Button android:id="@+id/btnBooks" android:text="📚 听书"   android:layout_width="match_parent"     android:layout_height="match_parent"      android:layout_weight="1"/>
         <Button android:id="@+id/btnImages" android:text="🖼️ 图片"    android:layout_width="match_parent"    android:layout_height="match_parent"     android:layout_weight="1"/>
         <Button android:id="@+id/btnMusic" android:text="🎵 音乐"   android:layout_width="match_parent"    android:layout_height="match_parent"      android:layout_weight="1"/>
         <Button android:id="@+id/btnVideo" android:text="🎬 视频"   android:layout_width="match_parent"    android:layout_height="match_parent"      android:layout_weight="1"/>

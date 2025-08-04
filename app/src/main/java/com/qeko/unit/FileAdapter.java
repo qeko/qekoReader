@@ -86,13 +86,34 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
             holder.itemView.setBackgroundColor(Color.parseColor("#D0F0C0")); // 浅绿色
         }
 
-/*        if (item.isLastRead()) {
-            holder.icon.setVisibility(View.VISIBLE);
-            holder.title.setTextColor(Color.RED);
+        if (item.isFolder()) {
+            holder.icon.setImageResource(R.drawable.ic_folder_closed);
         } else {
-            holder.icon.setVisibility(View.GONE);
-            holder.title.setTextColor(Color.BLACK);
-        }*/
+            String name = item.getFile().getName().toLowerCase();
+
+            if (name.endsWith(".txt")) {
+                holder.icon.setImageResource(R.drawable.ic_file);
+            } else if (name.endsWith(".pdf")) {
+                holder.icon.setImageResource(R.drawable.ic_pdf);
+            } else if (name.endsWith(".epub")) {
+                holder.icon.setImageResource(R.drawable.ic_epub);
+            } else if (name.endsWith(".mobi") || name.endsWith(".azw") || name.endsWith(".azw3")) {
+                holder.icon.setImageResource(R.drawable.ic_ebook);
+            } else if (name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".flac")) {
+                holder.icon.setImageResource(R.drawable.ic_music);
+            } else if (name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".avi")) {
+                holder.icon.setImageResource(R.drawable.ic_video);
+            } else if (name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".gif")) {
+                holder.icon.setImageResource(R.drawable.ic_image);
+            } else {
+                holder.icon.setImageResource(R.drawable.ic_file); // 默认
+            }
+        }
+
+        holder.title.setText(item.getFile().getName());
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) listener.onItemClick(item);
+        });
 
     }
 

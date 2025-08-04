@@ -15,6 +15,7 @@ import java.io.File;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -212,5 +213,62 @@ public class FileUtils {
         }
 
         editor.apply();
+    }
+
+
+    private static final int MAX_RECENT_BOOKS = 5;
+
+    public static void saveRecentBook(Context context, File file, int pageCount, int charsPerPage) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences.Editor editor = prefs.edit();
+
+        String recent = prefs.getString("recent_books", "");
+        List<String> list = new LinkedList<>();
+        if (!recent.isEmpty()) {
+            String[] entries = recent.split("\\|\\|");
+            for (String entry : entries) {
+                if (!entry.startsWith(file.getAbsolutePath())) {
+                    list.add(entry);
+                }
+            }
+        }
+
+        String newEntry = file.getAbsolutePath() + "," + pageCount + "," + charsPerPage;
+        list.add(0, newEntry);
+
+        while (list.size() > MAX_RECENT_BOOKS) {
+            list.remove(list.size() - 1);
+        }
+
+        editor.putString("recent_books", String.join("||", list));
+        editor.apply();
+    }
+
+    public static List<FileItem> getRecentBooks(Context context) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        String recent = prefs.getString("recent_books", "");
+        List<FileItem> result = new ArrayList<>();
+
+        if (!recent.isEmpty()) {
+            String[] entries = recent.split("\\|");
+            for (String entry : entries) {
+                String[] parts = entry.split(",");
+                if (parts.length == 3) {
+                    File file = new File(parts[0]);
+                    if (file.exists()) {
+                        int pages = Integer.parseInt(parts[1]);
+                        int charsPerPage = Integer.parseInt(parts[2]);
+                        FileItem item = new FileItem(file, false);
+                        item.setPageCount(pages);
+                        item.setCharsPerPage(charsPerPage);
+                        item.setPinned(true);
+                        item.setLastRead(true);
+                        result.add(item);
+                    }
+                }
+            }
+        }
+
+        return result;
     }
 }

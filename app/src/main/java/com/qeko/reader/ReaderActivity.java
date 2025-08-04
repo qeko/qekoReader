@@ -26,6 +26,7 @@ import androidx.preference.PreferenceManager;
 
 import com.qeko.tts.TextToSpeechManager;
 import com.qeko.unit.AppPreferences;
+import com.qeko.unit.FileUtils;
 
 import org.mozilla.universalchardet.UniversalDetector;
 
@@ -64,6 +65,7 @@ public class ReaderActivity extends AppCompatActivity {
 
     private int lastPage ;
     private  int lastSentence  ;
+    private float lineSpacingMultiplier = 1.5f; // 示例值，也可以存储为用户偏好
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,10 +83,13 @@ public class ReaderActivity extends AppCompatActivity {
         speechRate = appPreferences.getSpeechRate();
         fontSize = appPreferences.getFontSize();
 
-        ttsManager = new TextToSpeechManager(this, speechRate, this::onTtsDone);
+//        if (null == ttsManager)   ttsManager = new TextToSpeechManager(this, speechRate, this::onTtsDone);
+
         controlActivity = new ControlActivity(findViewById(R.id.controlPanel), this);
 
         textView.setTextSize(fontSize);
+
+        textView.setLineSpacing(5, lineSpacingMultiplier);
 
         restoreUserSettings();
 
@@ -109,6 +114,12 @@ public class ReaderActivity extends AppCompatActivity {
         setupSeekBar();
         setupTouchControl();
         btnTTS.setOnClickListener(v -> toggleSpeaking());
+
+        new Thread(() -> {
+                runOnUiThread(() -> {
+                if (null == ttsManager)   ttsManager = new TextToSpeechManager(this, speechRate, this::onTtsDone);
+            });
+        }).start();
     }
 
 
@@ -161,13 +172,14 @@ public class ReaderActivity extends AppCompatActivity {
         sentenceIndex =lastSentence;// preferences.getInt("lastSentence", 0);
     }
 
-    public void buildPageOffsets() {
+
+     public void buildPageOffsets() {
         pageOffsets.clear();
 
         int viewWidth = textView.getWidth() - textView.getPaddingLeft() - textView.getPaddingRight();
         int viewHeight = textView.getHeight() - textView.getPaddingTop() - textView.getPaddingBottom();
         if (viewWidth <= 0 || viewHeight <= 0) return;
-//        viewHeight = viewHeight - 250;
+        viewHeight = viewHeight - 680;
         TextPaint paint = textView.getPaint();
         int start = 0;
         int textLength = fullText.length();
@@ -266,6 +278,7 @@ public class ReaderActivity extends AppCompatActivity {
     }
 
     private void speakCurrentPage() {
+
         isSpeaking = true;
         btnTTS.setText("⏸️");
         speakNextSentence();
