@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.os.Handler;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.TextPaint;
@@ -48,6 +49,7 @@ public class ReaderActivity extends AppCompatActivity {
     private TextView pageInfo;
     public TextToSpeechManager ttsManager;
     private ControlActivity controlActivity;
+
     private boolean isSimplified = true;
 
     private String fullText = "";
@@ -120,6 +122,15 @@ public class ReaderActivity extends AppCompatActivity {
                 if (null == ttsManager)   ttsManager = new TextToSpeechManager(this, speechRate, this::onTtsDone);
             });
         }).start();
+
+        //自动点击
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                // 模拟点击事件
+                toggleSpeaking();
+            }
+        }, 1000); // 1秒后执行
     }
 
 
@@ -284,53 +295,22 @@ public class ReaderActivity extends AppCompatActivity {
         speakNextSentence();
     }
 
-/*
+
     private void speakNextSentence() {
-        if(currentSentences != null){
+        if(currentSentences!=null)
+        {
             if (sentenceIndex >= currentSentences.length) {
+                // 当前页读完，自动翻页朗读下一页
                 if (currentPage < totalPages - 1) {
                     currentPage++;
                     loadPage(currentPage);
                     speakCurrentPage();
                 } else {
+                    // 读完所有页
                     isSpeaking = false;
                     btnTTS.setText("▶️");
                     highlightSentence(-1);
                 }
-                return;
-            }
-
-            String sentence = currentSentences[sentenceIndex];
-            highlightSentence(sentenceIndex);
-
-
-            ttsManager.speak(sentence);
-        }
-    }
-*/
-
-/*
-    sentence = sentence.replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9\\s]{3,}", "");
-    sentence = sentence.replaceAll("[\"“”]", "");
-    sentence = sentence.replaceAll("\\.", "");
-    */
-
-
-
-    private void speakNextSentence() {
-        if (sentenceIndex >= currentSentences.length) {
-            // 当前页读完，自动翻页朗读下一页
-            if (currentPage < totalPages - 1) {
-                currentPage++;
-                loadPage(currentPage);
-                speakCurrentPage();
-            } else {
-                // 读完所有页
-                isSpeaking = false;
-                btnTTS.setText("▶️");
-                highlightSentence(-1);
-            }
-            return;
         }
 
         String sentence = currentSentences[sentenceIndex];
@@ -342,6 +322,8 @@ public class ReaderActivity extends AppCompatActivity {
         sentence = sentence.replaceAll("\\.", "");
 
         ttsManager.speak(sentence);
+            return;
+        }
     }
 
 
@@ -524,22 +506,4 @@ public class ReaderActivity extends AppCompatActivity {
         textView.setTypeface(typeface);
     }
 
-/*    // 添加方法：
-    public void toggleSimplifiedTraditional() {
-        if (currentSentences == null || currentSentences.length == 0) return;
-
-        Transliterator trans;
-        if (isSimplified) {
-            trans = Transliterator.getInstance("Simplified-Traditional");
-        } else {
-            trans = Transliterator.getInstance("Traditional-Simplified");
-        }
-
-        for (int i = 0; i < currentSentences.length; i++) {
-            currentSentences[i] = trans.transliterate(currentSentences[i]);
-        }
-
-        isSimplified = !isSimplified;
-        highlightSentence(sentenceIndex); // 重新高亮当前句
-    }*/
 }

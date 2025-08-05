@@ -168,7 +168,7 @@ public class FileUtils {
         for (Map.Entry<String, List<String>> entry : categoryDirs.entrySet()) {
             String key = entry.getKey();
             List<String> paths = entry.getValue();
-            Log.d("TAG", key+"saveCategoryDirs: "+paths.size());
+//            Log.d("TAG", key+"saveCategoryDirs: "+paths.size());
             editor.putString(key, TextUtils.join(";", paths)); // ✅ 使用分号拼接成单一字符串保存
 
         }

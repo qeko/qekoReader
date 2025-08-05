@@ -12,7 +12,7 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
      <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
     <uses-permission android:name="android.permission.READ_MEDIA_BOOKS" />
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
+
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
@@ -40,7 +40,21 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
 
-<!--        <activity android:name=".ControlActivity" />-->
+
+        <activity android:name=".MobiReaderActivity" />
+        <activity android:name=".EpubReaderActivity" />
+        <activity android:name=".ImageViewerActivity" />
+        <activity android:name=".KindleReaderActivity" />
+        <activity android:name=".PdfReaderActivity" />
+        <activity android:name=".VideoPlayerActivity"
+            android:configChanges="orientation|screenSize"
+            android:screenOrientation="sensorLandscape"/>
+
+
+        <activity
+            android:name=".MusicPlayerActivity"
+            android:theme="@style/BottomDialogTheme" />
+
         <activity android:name=".ReaderActivity"
             android:exported="true"
             android:configChanges="orientation|keyboardHidden|screenSize"/>

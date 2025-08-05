@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
@@ -96,6 +97,31 @@ public class MainActivity extends Activity {
 
         Button btnScan = findViewById(R.id.btnScan);
         btnScan.setOnClickListener(v -> scanDocuments());
+
+        //如果目录列表为空
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        String bookDirsStr = prefs.getString("BOOK_DIRS", "");
+
+        if (bookDirsStr.isEmpty()) {
+            btnScan.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    scanDocuments();
+                }
+            }, 1000); // 延迟 1 秒执行
+        }
+
+
+
+        //自动点击
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                // 模拟点击事件
+                switchCategory(new BookFileStrategy(), "BOOK_DIRS");
+            }
+        }, 1000); // 1秒后执行
+
 
 /*        findViewById(R.id.btnScan).setOnClickListener(v -> {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

@@ -45,19 +45,26 @@
             android:textColor="#888888"
             android:background="@android:color/transparent" />
 
-        <include
-            android:id="@+id/controlPanel"
-            layout="@layout/activity_control"
-            android:visibility="gone"
-            android:background="@android:color/transparent" />
-
         <SeekBar
             android:id="@+id/pageSeekBar"
             android:layout_width="262dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_gravity="bottom"
-            android:background="@android:color/transparent"
- />
+            android:background="@android:color/transparent"/>
     </LinearLayout>
+        <include
+            android:id="@+id/controlPanel"
+            layout="@layout/activity_control"
+            android:visibility="gone"
+            android:background="@android:color/transparent" />
+
+
+
+<!--    <include
+        android:id="@+id/musicPanel"
+        layout="@layout/activity_music_player"
+        android:visibility="gone"
+        android:background="@android:color/transparent" />-->
+
 </FrameLayout>

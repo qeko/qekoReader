@@ -2,12 +2,19 @@ package com.qeko.reader;
 
 
 
-
+import android.util.Log;
+import android.view.View;
+import android.view.WindowManager;
+import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
+import android.widget.Button;
+import android.widget.SeekBar;
 import android.widget.Toast;
-
 import org.videolan.libvlc.LibVLC;
 import org.videolan.libvlc.Media;
 import org.videolan.libvlc.MediaPlayer;
@@ -24,17 +31,39 @@ public class VideoPlayerActivity extends Activity {
     private MediaPlayer mediaPlayer;
     private List<File> videoFiles = new ArrayList<>();
     private int currentIndex = 0;
+    private GestureDetector gestureDetector;
+    private SeekBar seekBar;
+    private Button btnSwitchAudioTrack,btnShowList,btnRepeat,btnFavrite;//btnPlayPause,
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_video_player);
 
+        // 隐藏状态栏，保持屏幕常亮
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN);
+        // 初始化手势检测器
+        gestureDetector = new GestureDetector(this, new GestureListener());
         videoLayout = findViewById(R.id.vlcVideoLayout);
+
+//        btnFavrite  = findViewById(R.id.btn_favority);
+        btnSwitchAudioTrack = findViewById(R.id.btnSwitchAudioTrack);
+
+//        btnPlayPause = findViewById(R.id.btn_play_pause);
+        btnRepeat = findViewById(R.id.btn_repeat);
+        btnRepeat.setOnClickListener(v -> setRepeat());
+        btnRepeat.setTextColor(Color.GRAY);
+        seekBar = findViewById(R.id.seekBar);
 
         libVLC = new LibVLC(this, new ArrayList<>());
         mediaPlayer = new MediaPlayer(libVLC);
         mediaPlayer.attachViews(videoLayout, null, false, false);
+        mediaPlayer.setVideoScale( MediaPlayer.ScaleType.SURFACE_FILL);
+//        Log.d("TAG", "mediaPlayer.getAudioTracksCount(): "+mediaPlayer.getAudioTracksCount());
+//
+//        if(mediaPlayer.getAudioTracksCount()<0) btnSwitchAudioTrack.setVisibility(View.GONE);
+//        else btnSwitchAudioTrack.setVisibility(View.VISIBLE);
 
         mediaPlayer.setEventListener(event -> {
             if (event.type == MediaPlayer.Event.EndReached) {
@@ -65,6 +94,33 @@ public class VideoPlayerActivity extends Activity {
             Toast.makeText(this, "未提供视频路径", Toast.LENGTH_SHORT).show();
             finish();
         }
+
+
+        // 播放时默认选择第二个音轨并隐藏字幕
+        new android.os.Handler().postDelayed(() -> {
+            switchAudioTrack();
+            mediaPlayer.setSpuTrack(-1); // 不显示字幕
+
+            if(mediaPlayer.getAudioTracksCount()<3) btnSwitchAudioTrack.setVisibility(View.GONE);
+            else btnSwitchAudioTrack.setVisibility(View.VISIBLE);
+
+        }, 1000); // 延迟1秒执行
+
+        btnSwitchAudioTrack.setOnClickListener(v -> switchName());
+        // 下一首按钮
+    }
+
+    private void setRepeat() {
+//        Log.d("TAG", "setRepeat: "+btnRepeat.getTextColors());
+        if (btnRepeat.getTextColors().toString().indexOf("7829368")>0)
+        {
+            this.btnRepeat.setTextColor(Color.RED);
+        }else
+        {
+            this.btnRepeat.setTextColor(Color.GRAY);
+        }
+
+//        Log.d("TAG", "setRepeat: "+btnRepeat.getTextColors());
     }
 
     private boolean isVideoFile(String name) {
@@ -74,20 +130,191 @@ public class VideoPlayerActivity extends Activity {
     }
 
     private void playVideo(int index) {
+
         if (index >= 0 && index < videoFiles.size()) {
             File file = videoFiles.get(index);
             Media media = new Media(libVLC, Uri.fromFile(file));
             mediaPlayer.setMedia(media);
+
             media.release();
+
+
             mediaPlayer.play();
+
+
+
+            // 播放时默认选择第二个音轨并隐藏字幕
+            new android.os.Handler().postDelayed(() -> {
+                switchAudioTrack();
+                mediaPlayer.setSpuTrack(-1); // 不显示字幕
+
+                Log.d("TAG1", "mediaPlayer.getAudioTracksCount(): "+mediaPlayer.getAudioTracksCount());
+                if(mediaPlayer.getAudioTracksCount()<3) btnSwitchAudioTrack.setVisibility(View.GONE);
+                else btnSwitchAudioTrack.setVisibility(View.VISIBLE);
+
+            }, 1000); // 延迟1秒执行
+
         }
+
+
+
+//        Log.d("TAG", "playVideo getTitle: "+mediaPlayer.getScale());
+//        Log.d("TAG", "playVideo getTitle: "+mediaPlayer.get);
     }
 
     private void playNextVideo() {
-        currentIndex = (currentIndex + 1) % videoFiles.size();
+//        Log.d("TAG", "btnRepeat: "+btnRepeat.getTextColors());
+        if (btnRepeat.getTextColors().toString().indexOf("7829368")>0)
+        {
+            currentIndex = (currentIndex + 1) % videoFiles.size();
+            btnRepeat.setTextColor(Color.GRAY);
+        } else{
+            btnRepeat.setTextColor(Color.RED);
+        }
         playVideo(currentIndex);
     }
 
+    @SuppressLint("ResourceAsColor")
+    private void switchName() {
+        if(btnSwitchAudioTrack.getText().equals("原唱"))
+        {
+            btnSwitchAudioTrack.setBackgroundColor(android.R.color.holo_blue_dark);
+            btnSwitchAudioTrack.setText("伴唱");
+
+        }else
+        {
+            btnSwitchAudioTrack.setText("原唱");
+        }
+        switchAudioTrack();
+    }
+
+    @SuppressLint("ResourceAsColor")
+    private void switchAudioTrack() {
+        MediaPlayer.TrackDescription[] audioTracks = mediaPlayer.getAudioTracks();
+        int currentTrackIndex = mediaPlayer.getAudioTrack();
+        if (audioTracks != null && audioTracks.length > 2) {
+            if(btnSwitchAudioTrack.getText().equals("原唱"))
+            {
+                if(currentTrackIndex != 1)mediaPlayer.setAudioTrack(1);
+//                mediaPlayer.setAudioTrack(0);
+            }else
+            {
+                if(currentTrackIndex != 2)mediaPlayer.setAudioTrack(2);
+//                mediaPlayer.setAudioTrack(3);
+            }
+
+        }
+    }
+
+
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (mediaPlayer != null) {
+//            savePlaybackPosition();
+            mediaPlayer.pause();
+
+//            progressHandler.removeCallbacks(updateProgressTask); // 停止更新
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (mediaPlayer != null) {
+            mediaPlayer.play();
+        }
+//        progressHandler.post(updateProgressTask); // 开始更新
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        return gestureDetector.onTouchEvent(event) || super.onTouchEvent(event);
+    }
+
+    private class GestureListener extends GestureDetector.SimpleOnGestureListener {
+
+        private static final int SWIPE_THRESHOLD = 200; // 滑动的最小距离
+        private static final int VELOCITY_THRESHOLD = 200; // 滑动的最小速度
+
+        @Override
+        public boolean onSingleTapUp(MotionEvent e) {
+            // 单击切换播放/暂停
+            togglePlayPause();
+            return true;
+        }
+
+        int iFligDown = 0;
+        @Override
+        public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+            float deltaX = e2.getX() - e1.getX();
+            float deltaY = e2.getY() - e1.getY();
+
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                // 水平滑动
+                if (Math.abs(deltaX) > SWIPE_THRESHOLD && Math.abs(velocityX) > VELOCITY_THRESHOLD) {
+                    if (deltaX > 0) {
+                        onSwipeRight();
+                     } else {
+                        onSwipeLeft();
+
+                    }
+                    return true;
+                }
+            } else {
+                // 垂直滑动
+                if (Math.abs(deltaY) > SWIPE_THRESHOLD && Math.abs(velocityY) > VELOCITY_THRESHOLD) {
+                    if (deltaY > 0) {
+                        currentIndex = currentIndex-1;
+
+                    } else {
+                        currentIndex = currentIndex+1;
+
+                    }
+                    playVideo(currentIndex);
+                    btnRepeat.setTextColor(Color.GRAY);//使重唱无效
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+    }
+
+    // 左滑时快进5秒
+    private boolean msg=true;
+    private void onSwipeLeft() {
+        long currentTime = mediaPlayer.getTime(); // 获取当前播放时间
+        mediaPlayer.setTime(currentTime - 5000);  // 快进5秒
+
+        if(msg)Toast.makeText(this, "后退5’", Toast.LENGTH_SHORT).show();
+        msg = false;
+    }
+
+    private void onSwipeRight() {
+        long currentTime = mediaPlayer.getTime(); // 获取当前播放时间
+        mediaPlayer.setTime(currentTime + 5000);  //  5秒
+        if(msg)Toast.makeText(this, "前进5‘", Toast.LENGTH_SHORT).show();
+        msg = false;
+    }
+
+
+    private boolean isPlaying = true;  // 当前播放状态
+    private void togglePlayPause() {
+        if (mediaPlayer != null) {
+            if (mediaPlayer.isPlaying()) {
+                mediaPlayer.pause();
+                isPlaying = false;
+                Toast.makeText(this, "暂停", Toast.LENGTH_SHORT).show();
+            } else {
+                mediaPlayer.play();
+                isPlaying = true;
+//                Toast.makeText(this, "播放", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
     @Override
     protected void onDestroy() {
         super.onDestroy();
