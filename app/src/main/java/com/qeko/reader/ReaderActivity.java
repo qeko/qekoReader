@@ -129,8 +129,9 @@ public class ReaderActivity extends AppCompatActivity {
             public void run() {
                 // 模拟点击事件
                 toggleSpeaking();
+//                speakCurrentPage();
             }
-        }, 1000); // 1秒后执行
+        }, 4000); // 1秒后执行
     }
 
 

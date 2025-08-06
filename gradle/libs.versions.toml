@@ -10,6 +10,7 @@ constraintlayout = "2.2.0"
 gamesActivity = "4.0.0"
 toolsCore = "1.0.0-alpha13"
 preference = "1.2.1"
+roomCompilerProcessingTesting = "2.7.2"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -22,6 +23,7 @@ constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayo
 games-activity = { group = "androidx.games", name = "games-activity", version.ref = "gamesActivity" }
 tools-core = { group = "androidx.privacysandbox.tools", name = "tools-core", version.ref = "toolsCore" }
 preference = { group = "androidx.preference", name = "preference", version.ref = "preference" }
+room-compiler-processing-testing = { group = "androidx.room", name = "room-compiler-processing-testing", version.ref = "roomCompilerProcessingTesting" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

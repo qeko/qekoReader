@@ -1,84 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/playerContainer"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#DDFFFFFF"
+    android:id="@+id/musicPlayerRoot"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:gravity="center">
-<!--<LinearLayout
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:background="#EEEEEE"
-    android:padding="8dp">-->
-
-    <LinearLayout
-        android:background="@android:color/transparent"
-        android:id="@+id/musicControlPanel"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:orientation="vertical"
-        android:padding="12dp"
-        android:gravity="center">
-
+    android:background="#F0F0F0"
+    android:padding="8dp"
+     >
 
     <TextView
         android:id="@+id/tvSongTitle"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="歌曲名称"
         android:textSize="16sp"
-        android:textStyle="bold" />
+        android:textStyle="bold"
+        android:ellipsize="end"
+        android:singleLine="true"
+        android:textColor="#000000" />
 
+    <TextView
+        android:id="@+id/tvCurrentTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="00:00 / 00:00"
+        android:textSize="10sp"
+        android:textColor="#666666"
+        android:layout_marginTop="4dp" />
 
-        <SeekBar
-            android:id="@+id/seekBar"
-            android:layout_width="match_parent"
+    <SeekBar
+        android:id="@+id/seekBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="8dp" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center">
+       <Button
+            android:id="@+id/btnRepeatMode"
+            android:textColor="#FFFFFF"
+            android:text="🔁"
+           android:textSize="24sp"
+           android:layout_width="wrap_content"
+           android:layout_height="wrap_content"     />
+
+        <Button
+            android:id="@+id/btnPlayPause"
+            android:textSize="24sp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingTop="8dp" />
-        <LinearLayout
-            android:background="@android:color/transparent"
+            android:text="▶️"  />
 
-            android:layout_width="match_parent"
+        <Button
+            android:id="@+id/btnNext"
+            android:textSize="24sp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:orientation="horizontal"
-            android:padding="12dp"
-            android:gravity="center">
+            android:text="⏭️"/>
 
-            <TextView
-                android:id="@+id/tvCurrentTime"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="00:00 / 00:00"
-                android:textColor="#333333"
-                android:paddingTop="4dp" />
-    <Button
+<!--        <Button
+            android:id="@+id/btnPrev"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⏮" />-->
 
-        android:textSize="24dp"
-        android:id="@+id/btnPlayPause"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="▶️" />
 
-    <Button
-        android:textSize="24dp"
-        android:id="@+id/btnNext"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="⏭️" />
 
-    <Button
-        android:id="@+id/btnMode"
-        android:textSize="24dp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="🔁" />
 
+    </LinearLayout>
 </LinearLayout>
-</LinearLayout>
-
-        </LinearLayout>
-

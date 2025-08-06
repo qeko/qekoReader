@@ -49,12 +49,17 @@
         android:paddingTop="8dp" />
 
 
+<!--    <include
+        android:id="@+id/musicPlayerPanel"
+        layout="@layout/activity_music_player"
+        android:visibility="gone" />-->
     <!-- 刷新按钮 -->
     <Button
         android:id="@+id/btnScan"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="🔄 刷新" />
+
 
 </LinearLayout>
 

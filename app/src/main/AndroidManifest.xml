@@ -50,10 +50,13 @@
             android:configChanges="orientation|screenSize"
             android:screenOrientation="sensorLandscape"/>
 
-
         <activity
             android:name=".MusicPlayerActivity"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
             android:theme="@style/BottomDialogTheme" />
+
+<!--        android:theme="@style/Theme.AppCompat.Light.NoActionBar" />-->
 
         <activity android:name=".ReaderActivity"
             android:exported="true"

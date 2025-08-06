@@ -25,8 +25,7 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.qeko.openers.FileOpener;
-import com.qeko.openers.FileOpenerFactory;
+
 import com.qeko.unit.FileAdapter;
 import com.qeko.unit.FileItem;
 import com.qeko.unit.FileUtils;
@@ -71,7 +70,7 @@ public class MainActivity extends Activity {
 
         ensureStoragePermission();
 
-        adapter.setOnItemClickListener(item -> {
+/*        adapter.setOnItemClickListener(item -> {
             if (item.isFolder()) {
                 item.setExpanded(!item.isExpanded());
                 adapter.refreshDisplayItems();
@@ -80,7 +79,7 @@ public class MainActivity extends Activity {
                 FileOpener opener = FileOpenerFactory.getOpener(item.getFile().getName());
                 opener.open(this, item.getFile());
             }
-        });
+        });*/
 
         new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.RIGHT) {
             @Override public boolean onMove(@NonNull RecyclerView r, @NonNull RecyclerView.ViewHolder v1, @NonNull RecyclerView.ViewHolder v2) { return false; }
@@ -210,7 +209,16 @@ public class MainActivity extends Activity {
         this.currentCacheKey = cacheKey;
         List<File> files = FileUtils.reloadWithStrategy(this, strategy, cacheKey);
 
+
+
         showFiles(files);
+
+/*        View musicPlayerPanel = findViewById(R.id.musicPlayerPanel);
+        if ("MUSIC_DIRS".equals(cacheKey)) {
+            musicPlayerPanel.setVisibility(View.VISIBLE);
+        } else {
+            musicPlayerPanel.setVisibility(View.GONE);
+        }*/
     }
 
     private void showFiles(List<File> files) {
