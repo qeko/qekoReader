@@ -5,15 +5,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
-import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.Spinner;
 import android.widget.Toast;
 import android.app.Activity;
 
@@ -26,10 +27,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 
-import com.qeko.unit.FileAdapter;
-import com.qeko.unit.FileItem;
-import com.qeko.unit.FileUtils;
-import com.qeko.unit.ScanCacheManager;
+import com.qeko.utils.FileAdapter;
+import com.qeko.utils.FileItem;
+import com.qeko.utils.FileUtils;
+import com.qeko.utils.ScanCacheManager;
 
 import java.io.File;
 import java.util.*;
@@ -45,6 +46,9 @@ public class MainActivity extends Activity {
     private Button btnBooks, btnImages, btnMusic, btnVideo;
     private FileTypeStrategy currentStrategy;
     private String currentCacheKey;
+    private Spinner spinner;
+    private Handler handler = new Handler(Looper.getMainLooper());
+    private Runnable exitRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,16 +74,7 @@ public class MainActivity extends Activity {
 
         ensureStoragePermission();
 
-/*        adapter.setOnItemClickListener(item -> {
-            if (item.isFolder()) {
-                item.setExpanded(!item.isExpanded());
-                adapter.refreshDisplayItems();
-            } else {
-//                openFile(item.getFile());
-                FileOpener opener = FileOpenerFactory.getOpener(item.getFile().getName());
-                opener.open(this, item.getFile());
-            }
-        });*/
+
 
         new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.RIGHT) {
             @Override public boolean onMove(@NonNull RecyclerView r, @NonNull RecyclerView.ViewHolder v1, @NonNull RecyclerView.ViewHolder v2) { return false; }
@@ -97,7 +92,7 @@ public class MainActivity extends Activity {
         Button btnScan = findViewById(R.id.btnScan);
         btnScan.setOnClickListener(v -> scanDocuments());
 
-        //如果目录列表为空
+        //如果目录列表为空，自动刷新
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String bookDirsStr = prefs.getString("BOOK_DIRS", "");
 
@@ -112,7 +107,7 @@ public class MainActivity extends Activity {
 
 
 
-        //自动点击
+        //自动点击听书，可以和loadCachedFolders一起优化
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -121,7 +116,7 @@ public class MainActivity extends Activity {
             }
         }, 1000); // 1秒后执行
 
-
+        setupExitTimer();
 /*        findViewById(R.id.btnScan).setOnClickListener(v -> {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 if (!Environment.isExternalStorageManager()) {
@@ -140,6 +135,9 @@ public class MainActivity extends Activity {
             // 默认显示书籍
             switchCategory(new BookFileStrategy(), "BOOK_DIRS");
         });*/
+
+
+
     }
 
 
@@ -366,7 +364,46 @@ public class MainActivity extends Activity {
             }
         }
 
+    private void setupExitTimer() {  //change后执行
+        Spinner spinner = findViewById(R.id.spinner);
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (exitRunnable != null) {
+                    handler.removeCallbacks(exitRunnable);
+                }
 
+                int delayMillis = 0;
+                switch (position) {
+                    case 1: delayMillis = 5 * 60 * 1000; break;
+                    case 2: delayMillis = 10 * 60 * 1000; break;
+                    case 3: delayMillis = 30 * 60 * 1000; break;
+                    case 4: delayMillis = 60 * 60 * 1000; break;
+                    default: delayMillis = 0; break;
+                }
+
+                if (delayMillis > 0) {
+                    exitRunnable = () -> {
+                        Toast.makeText(MainActivity.this, "定时退出", Toast.LENGTH_SHORT).show();
+                        finish();
+                    };
+                    handler.postDelayed(exitRunnable, delayMillis);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (exitRunnable != null) {
+            handler.removeCallbacks(exitRunnable);
+        }
+        super.onDestroy();
+    }
+}
 /*
     private void loadCachedFolders() {
         File root = Environment.getExternalStorageDirectory();
@@ -423,7 +460,7 @@ public class MainActivity extends Activity {
 */
 
 
-    }
+
 
     /*
 

@@ -3,4 +3,13 @@
     <string name="file_icon">📄</string>
     <string name="folder_icon">📁</string>
 
+
+    <string-array name="spinner_items">
+        <item>10</item>
+        <item>20</item>
+        <item>30</item>
+        <item>60</item>
+        <item>120</item>
+    </string-array>
+
 </resources>

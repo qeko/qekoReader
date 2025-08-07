@@ -53,9 +53,12 @@ dependencies {
 //    implementation 'com.github.barteksc:android-pdf-viewer:2.1.0'
 //    implementation'com.github.barteksc:android-pdf-viewer:2.8.2'
 //    annotationProcessor 'com.github.barteksc:pdfium-android:1.9.0'
-//    implementation 'nl.siegmann.epublib:epublib-core:3.1'
+
 //    implementation 'com.github.FolioReader:FolioReader-Android:v0.5.4'
 //    implementation "com.folioreader:folioreader:0.5.4"
+//    implementation 'org.epublib:epublib-core:3.1'
+//    implementation 'com.github.jabbink:epublib-android:0.6.0'
+//    implementation 'nl.siegmann.epublib:epublib-core:3.1'
 
 
 

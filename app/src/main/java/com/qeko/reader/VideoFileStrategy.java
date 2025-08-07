@@ -11,10 +11,10 @@ public class VideoFileStrategy implements FileTypeStrategy {
     @Override
     public boolean accept(File file) {
         String name = file.getName().toLowerCase();
-        Log.d("VideoFileStrategy", "accept1: "+name);
+//        Log.d("VideoFileStrategy", "accept1: "+name);
         for (String ext : EXTENSIONS) {
             if (name.endsWith("." + ext)) {
-                Log.d("VideoFileStrategy", "accept2: "+name);
+//                Log.d("VideoFileStrategy", "accept2: "+name);
                 return true;
             }
         }

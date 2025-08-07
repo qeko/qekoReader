@@ -1,4 +1,4 @@
-package com.qeko.unit;
+package com.qeko.utils;
 
 
 import android.content.ContentValues;
@@ -6,7 +6,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.widget.SeekBar;
 
 import com.qeko.reader.Book;
 

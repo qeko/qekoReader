@@ -10,7 +10,8 @@ import android.widget.Toast;
 import com.folioreader.FolioReader;
 import com.folioreader.model.HighlightImpl;
 import com.folioreader.model.event.SaveHighlightEvent;
-import com.folioreader.util.AppUtil;
+import com.folioreader.util.AppUtil;*/
+/*
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;*/

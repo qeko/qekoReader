@@ -54,12 +54,42 @@
         layout="@layout/activity_music_player"
         android:visibility="gone" />-->
     <!-- 刷新按钮 -->
-    <Button
-        android:id="@+id/btnScan"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="🔄 刷新" />
 
+
+
+    <!-- 定时退出 -->
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp">
+
+        <Button
+            android:id="@+id/btnScan"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🔄 刷新" />
+
+        <Spinner
+            android:id="@+id/spinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:spinnerMode="dialog"
+            android:entries="@array/spinner_items"/>
+
+
+
+    <TextView
+        android:id="@+id/labelExitHint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:text="分钟后退出"
+        android:paddingStart="8dp" />
+
+
+
+</LinearLayout>
 
 </LinearLayout>
 

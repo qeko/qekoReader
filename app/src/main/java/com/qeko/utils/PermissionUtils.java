@@ -1,4 +1,4 @@
-package com.qeko.unit;
+package com.qeko.utils;
 
 
 
@@ -13,7 +13,6 @@ import android.os.Build;
 import android.provider.Settings;
 import android.widget.Toast;
 
-import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 

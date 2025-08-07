@@ -1,7 +1,6 @@
 package com.qeko.reader;
 
 import android.app.Dialog;
-import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -26,8 +25,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceManager;
 
 import com.qeko.tts.TextToSpeechManager;
-import com.qeko.unit.AppPreferences;
-import com.qeko.unit.FileUtils;
+import com.qeko.utils.AppPreferences;
 
 import org.mozilla.universalchardet.UniversalDetector;
 
@@ -37,7 +35,6 @@ import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 //import com.ibm.icu.text.Transliterator;
 
@@ -116,22 +113,6 @@ public class ReaderActivity extends AppCompatActivity {
         setupSeekBar();
         setupTouchControl();
         btnTTS.setOnClickListener(v -> toggleSpeaking());
-
-        new Thread(() -> {
-                runOnUiThread(() -> {
-                if (null == ttsManager)   ttsManager = new TextToSpeechManager(this, speechRate, this::onTtsDone);
-            });
-        }).start();
-
-        //自动点击
-        new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                // 模拟点击事件
-                toggleSpeaking();
-//                speakCurrentPage();
-            }
-        }, 4000); // 1秒后执行
     }
 
 
@@ -275,6 +256,29 @@ public class ReaderActivity extends AppCompatActivity {
         currentPage = page;
         seekBar.setProgress(page);
         updatePageInfo();
+
+
+
+        new Thread(() -> {
+            runOnUiThread(() -> {
+                if (null == ttsManager)
+                {
+                    ttsManager = new TextToSpeechManager(this,  this::onTtsDone);
+                    ttsManager.setSpeed(speechRate);
+                    //自动点击
+                    new Handler().postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            // 模拟点击事件
+                            toggleSpeaking();
+//                speakCurrentPage();
+                        }
+                    }, 2000); // 1秒后执行
+                }
+            });
+        }).start();
+
+
     }
 
 
@@ -431,7 +435,10 @@ public class ReaderActivity extends AppCompatActivity {
                 .putInt("lastSentence", sentenceIndex)
                 .apply();
 
-        if (ttsManager != null) ttsManager.shutdown();
+        if (ttsManager != null) {
+            ttsManager.stop();
+            ttsManager.shutdown();
+        }
         super.onDestroy();
     }
 

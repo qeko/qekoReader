@@ -1,6 +1,21 @@
 pluginManagement {
     repositories {
 
+        maven { url 'https://developer.huawei.com/repo/' }
+//添加阿里云镜像
+        maven { url 'https://maven.aliyun.com/repository/central' }
+
+        maven { url 'https://maven.aliyun.com/repository/jcenter' }
+
+        maven { url 'https://maven.aliyun.com/repository/google' }
+
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+
+        maven { url 'https://maven.aliyun.com/repository/public' }
+
+
+        maven { url 'https://jitpack.io' }
+
         google {
             content {
                 includeGroupByRegex("com\\.android.*")
@@ -9,8 +24,10 @@ pluginManagement {
             }
         }
         mavenCentral()
-        maven { url 'https://jitpack.io' }  // ✅ 添加这一行
         gradlePluginPortal()
+ 
+
+
     }
 }
 dependencyResolutionManagement {

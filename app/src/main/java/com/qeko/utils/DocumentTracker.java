@@ -1,12 +1,6 @@
-package com.qeko.unit;
+package com.qeko.utils;
 
 import android.content.Context;
-import android.content.SharedPreferences;
-
-import java.io.File;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 
 
 public class DocumentTracker {

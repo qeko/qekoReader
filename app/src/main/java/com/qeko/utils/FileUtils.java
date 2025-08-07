@@ -1,8 +1,9 @@
 
 
-package com.qeko.unit;
+package com.qeko.utils;
 
-
+import java.io.File;
+import java.io.IOException;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.text.TextUtils;
@@ -10,18 +11,25 @@ import android.text.TextUtils;
 import androidx.preference.PreferenceManager;
 
 import com.qeko.reader.FileTypeStrategy;
+import com.qeko.reader.PdfReaderActivity;
+import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
+import com.tom_roush.pdfbox.pdmodel.PDDocument;
+import com.tom_roush.pdfbox.pdmodel.PDDocumentCatalog;
+import com.tom_roush.pdfbox.pdmodel.PDPageContentStream;
+import com.tom_roush.pdfbox.pdmodel.PDPageTree;
+import com.tom_roush.pdfbox.pdmodel.font.PDFont;
+import com.tom_roush.pdfbox.pdmodel.font.PDType0Font;
+import com.tom_roush.pdfbox.text.PDFTextStripper;
 
 import java.io.File;
 
+import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import android.text.TextUtils;
+
 import android.util.Log;
-import android.widget.Toast;
 
 public class FileUtils {
     // 递归扫描 .txt 文件
@@ -41,6 +49,71 @@ public class FileUtils {
         }
         return result;
     }
+
+    /**
+     * 从PDF文件中提取指定页码的文本内容。
+     *
+     * @param file      PDF文件
+     * @param context   Android上下文（暂时未用，可用于字体加载等扩展）
+     * @param fontName  字体名（预留参数，可忽略）
+     * @param pageIndex 从0开始的页码
+     * @return 提取到的该页文本，失败则返回空字符串
+     */
+    public static String extractTextFromPdfPage(File file, Context context, String fontName, int pageIndex) {
+        String result = "";
+        PDDocument document = null;
+
+        try {
+            document = PDDocument.load(file);
+
+            // 页码从1开始，所以 +1
+            PDFTextStripper stripper = new PDFTextStripper();
+            stripper.setStartPage(pageIndex + 1);
+            stripper.setEndPage(pageIndex + 1);
+
+            result = stripper.getText(document).trim();
+
+        } catch (Exception e) {
+            Log.e("FileUtils", "extractTextFromPdfPage failed: " + e.getMessage());
+        } finally {
+            try {
+                if (document != null) document.close();
+            } catch (Exception e) {
+                Log.e("FileUtils", "Failed to close document: " + e.getMessage());
+            }
+        }
+
+        return result;
+    }
+
+    public static String extractTextFromPdf(File file, Context context, String fontAssetName) {
+        try {
+            PDFBoxResourceLoader.init(context);
+            PDDocument document = PDDocument.load(file);
+
+            // 解决中文字体显示
+            PDDocumentCatalog catalog = document.getDocumentCatalog();
+            PDPageTree pages = catalog.getPages();
+            PDPageContentStream contentStream;
+
+            // 加载字体文件
+            InputStream fontStream = context.getAssets().open(fontAssetName);
+            PDFont font = PDType0Font.load(document, fontStream, true);
+
+            PDFTextStripper stripper = new PDFTextStripper();
+            stripper.setSortByPosition(true);
+
+            String text = stripper.getText(document);
+            document.close();
+
+            return text;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "PDF读取失败：" + e.getMessage();
+        }
+    }
+
 //    private static final String[] EXT = {"txt","pdf","epub","mobi","azw","azw3"};
 /*
 
@@ -271,4 +344,7 @@ public class FileUtils {
 
         return result;
     }
+
+/*    public static String extractTextFromPdf(File file, PdfReaderActivity pdfReaderActivity, String s) {
+    }*/
 }

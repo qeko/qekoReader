@@ -16,13 +16,12 @@ public class TextToSpeechManager {
     private TextToSpeech tts = null;
     private Runnable onDoneCallback;
 
-    public TextToSpeechManager(Context context, float speed, Runnable onDone) {
+    public TextToSpeechManager(Context context,  Runnable onDone) {
         this.onDoneCallback = onDone;
         tts = new TextToSpeech(context, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 tts.setLanguage(Locale.CHINESE);
-                tts.setSpeechRate(speed);
-            }
+               }
         });
 
         tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {

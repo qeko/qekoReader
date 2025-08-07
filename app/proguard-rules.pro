@@ -19,3 +19,13 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# 保留 PdfBox 所需的资源
+-keep class com.tom_roush.pdfbox.** { *; }
+-keep class org.apache.fontbox.** { *; }
+-keepclassmembers class * {
+    ** MODULE$;
+}
+
+# 保留资源文件夹
+-keep resources com/tom_roush/pdfbox/resources/**

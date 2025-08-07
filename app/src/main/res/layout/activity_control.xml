@@ -101,6 +101,7 @@
             android:id="@+id/labelExitHint"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
             android:text="分钟后退出"
             android:paddingStart="8dp" />
     </LinearLayout>
@@ -114,17 +115,6 @@
         android:text="反白"
         android:layout_marginTop="8dp" />
 
-
-
-    <!-- 字体选择 -->
-    <Button
-        android:id="@+id/btnFontSelect"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="选择字体"
-        android:layout_marginTop="4dp" />
-
-
     <!-- 亮度调节 -->
     <TextView
         android:layout_width="wrap_content"
@@ -135,6 +125,17 @@
         android:id="@+id/seekBarBrightness"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
+
+    <!-- 字体选择 -->
+    <Button
+        android:id="@+id/btnFontSelect"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="选择字体"
+        android:layout_marginTop="4dp" />
+
+
+
 
     <!-- 预留按钮，暂时隐藏 -->
     <Button
