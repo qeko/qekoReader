@@ -50,6 +50,8 @@
             android:configChanges="orientation|screenSize"
             android:screenOrientation="sensorLandscape"/>
 
+        <service android:name=".MusicService"
+            android:exported="false" />
         <activity
             android:name=".MusicPlayerActivity"
             android:launchMode="singleTask"
@@ -63,6 +65,7 @@
             android:configChanges="orientation|keyboardHidden|screenSize"/>
          <activity
             android:name=".MainActivity"
+             android:screenOrientation="portrait"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

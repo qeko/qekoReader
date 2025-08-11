@@ -2,24 +2,31 @@
 
 package com.qeko.utils;
 
+import static android.content.ContentValues.TAG;
+
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.AssetManager;
 import android.text.TextUtils;
 
 import androidx.preference.PreferenceManager;
 
+import com.itextpdf.text.pdf.PdfReader;
+import com.itextpdf.text.pdf.parser.PdfTextExtractor;
+
 import com.qeko.reader.FileTypeStrategy;
 import com.qeko.reader.PdfReaderActivity;
-import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
+/*import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
 import com.tom_roush.pdfbox.pdmodel.PDDocument;
 import com.tom_roush.pdfbox.pdmodel.PDDocumentCatalog;
 import com.tom_roush.pdfbox.pdmodel.PDPageContentStream;
 import com.tom_roush.pdfbox.pdmodel.PDPageTree;
 import com.tom_roush.pdfbox.pdmodel.font.PDFont;
 import com.tom_roush.pdfbox.pdmodel.font.PDType0Font;
-import com.tom_roush.pdfbox.text.PDFTextStripper;
+import com.tom_roush.pdfbox.text.PDFTextStripper;*/
 
 import java.io.File;
 
@@ -49,98 +56,6 @@ public class FileUtils {
         }
         return result;
     }
-
-    /**
-     * 从PDF文件中提取指定页码的文本内容。
-     *
-     * @param file      PDF文件
-     * @param context   Android上下文（暂时未用，可用于字体加载等扩展）
-     * @param fontName  字体名（预留参数，可忽略）
-     * @param pageIndex 从0开始的页码
-     * @return 提取到的该页文本，失败则返回空字符串
-     */
-    public static String extractTextFromPdfPage(File file, Context context, String fontName, int pageIndex) {
-        String result = "";
-        PDDocument document = null;
-
-        try {
-            document = PDDocument.load(file);
-
-            // 页码从1开始，所以 +1
-            PDFTextStripper stripper = new PDFTextStripper();
-            stripper.setStartPage(pageIndex + 1);
-            stripper.setEndPage(pageIndex + 1);
-
-            result = stripper.getText(document).trim();
-
-        } catch (Exception e) {
-            Log.e("FileUtils", "extractTextFromPdfPage failed: " + e.getMessage());
-        } finally {
-            try {
-                if (document != null) document.close();
-            } catch (Exception e) {
-                Log.e("FileUtils", "Failed to close document: " + e.getMessage());
-            }
-        }
-
-        return result;
-    }
-
-    public static String extractTextFromPdf(File file, Context context, String fontAssetName) {
-        try {
-            PDFBoxResourceLoader.init(context);
-            PDDocument document = PDDocument.load(file);
-
-            // 解决中文字体显示
-            PDDocumentCatalog catalog = document.getDocumentCatalog();
-            PDPageTree pages = catalog.getPages();
-            PDPageContentStream contentStream;
-
-            // 加载字体文件
-            InputStream fontStream = context.getAssets().open(fontAssetName);
-            PDFont font = PDType0Font.load(document, fontStream, true);
-
-            PDFTextStripper stripper = new PDFTextStripper();
-            stripper.setSortByPosition(true);
-
-            String text = stripper.getText(document);
-            document.close();
-
-            return text;
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            return "PDF读取失败：" + e.getMessage();
-        }
-    }
-
-//    private static final String[] EXT = {"txt","pdf","epub","mobi","azw","azw3"};
-/*
-
-    public  static  List<File> scanAll(File dir) {
-
-        List<File> out = new ArrayList<>();
-        if (dir == null || !dir.isDirectory()) return out;
-        File[] fs = dir.listFiles();
-        if (fs == null) return out;
-        for (File f : fs) {
-            if (f.isDirectory()) {
-                out.addAll(scanAll(f));
-            } else
-                for (String s: EXT) {
-                    String e = getExtension(f);
-                    if (s.equalsIgnoreCase(e)) {
-                        out.add(f);
-                        Log.d("Scanner", "Found: "+f.getAbsolutePath());
-                        break;
-                    }
-                }
-//                if (f.getName().toLowerCase().endsWith(".txt")) {
-//                out.add(f);
-        }
-        return out;
-    }
-*/
 
     public static List<File> scanFilesIn(File dir, FileTypeStrategy strategy) {
         List<File> result = new ArrayList<>();
@@ -212,25 +127,6 @@ public class FileUtils {
         return count;
     }
 
-
-/*
-    public static int countMatchingFiles(File dir, FileTypeStrategy strategy) {
-        int count = 0;
-        File[] files = dir.listFiles();
-        if (files != null) {
-            Log.d("TAG", "Scanning directory: " + dir.getAbsolutePath());
-            for (File file : files) {
-
-                Log.d("file.isFile()", file.isFile()+"===Found file===: " + file.getName());
-                if (file.isFile() && strategy.accept(file)) {
-                    count++;
-                    Log.d("TAG", count+"Found file: " + file.getName());
-                }
-            }
-        }
-        Log.d("TAG", "countMatchingFiles: "+count);
-        return count;
-    }*/
 
 
 
@@ -345,6 +241,60 @@ public class FileUtils {
         return result;
     }
 
-/*    public static String extractTextFromPdf(File file, PdfReaderActivity pdfReaderActivity, String s) {
-    }*/
+    /**
+     * 从 PDF 文件提取所有文本（支持中文字体）
+     *
+     * @param file         PDF 文件
+     * @param context      Android Context
+     * @param fontAssetPath assets 中字体文件路径，例如 "fonts/SimsunExtG.ttf"
+     * @return 提取到的文本
+     */
+    public static String extractTextFromPdf(File file, Context context, String fontAssetPath) {
+        StringBuilder text = new StringBuilder();
+
+        PdfReader reader = null;
+        try {
+            // 确保字体文件从 assets 拷贝到临时路径（即使 iText 不直接用它，也方便后续扩展）
+            File fontFile = copyFontFromAssets(context, fontAssetPath);
+
+            // 打开 PDF
+            reader = new PdfReader(file.getAbsolutePath());
+
+            int numPages = reader.getNumberOfPages();
+            for (int i = 1; i <= numPages; i++) {
+                String pageText = PdfTextExtractor.getTextFromPage(reader, i);
+                text.append(pageText).append("\n");
+            }
+
+            Log.d(TAG, "PDF 文本提取完成，共 " + numPages + " 页");
+        } catch (Exception e) {
+            Log.e(TAG, "extractTextFromPdf 出错", e);
+        } finally {
+            if (reader != null) {
+                reader.close();
+            }
+        }
+        return text.toString();
+    }
+
+    /**
+     * 从 assets 中拷贝字体文件到 cache 目录
+     */
+    private static File copyFontFromAssets(Context context, String assetPath) throws Exception {
+        AssetManager am = context.getAssets();
+        InputStream is = am.open(assetPath);
+        File outFile = new File(context.getCacheDir(), new File(assetPath).getName());
+        FileOutputStream fos = new FileOutputStream(outFile);
+
+        byte[] buffer = new byte[1024];
+        int length;
+        while ((length = is.read(buffer)) != -1) {
+            fos.write(buffer, 0, length);
+        }
+        fos.flush();
+        fos.close();
+        is.close();
+
+        return outFile;
+    }
 }

@@ -5,6 +5,7 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
+import android.speech.tts.TextToSpeech;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.TextPaint;
@@ -270,7 +271,9 @@ public class ReaderActivity extends AppCompatActivity {
                         @Override
                         public void run() {
                             // 模拟点击事件
-                            toggleSpeaking();
+                            if (0 == TextToSpeech.SUCCESS) {
+                                toggleSpeaking();
+                            }
 //                speakCurrentPage();
                         }
                     }, 2000); // 1秒后执行

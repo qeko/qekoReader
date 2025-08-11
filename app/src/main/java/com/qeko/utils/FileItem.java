@@ -8,6 +8,7 @@ import java.io.File;import java.util.List;
 public class FileItem {
     private final File file;
     private final boolean isFolder;
+    public long size;
     private boolean isExpanded = false;
     private boolean isLastRead = false;
     private int documentCount = 0;

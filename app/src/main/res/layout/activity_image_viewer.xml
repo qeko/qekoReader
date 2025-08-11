@@ -2,119 +2,100 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/rootLayout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+    <!-- 顶部文件名显示（可切换显示/隐藏） -->
+    <TextView
+        android:id="@+id/tvFileName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:gravity="center"
+        android:background="#66000000"
+        android:visibility="visible" />
 
     <!-- 图片显示区域 -->
     <ImageView
         android:id="@+id/imageView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:adjustViewBounds="true"
         android:scaleType="matrix"
         android:contentDescription="Image Viewer" />
+
+    <!-- 缩略图横向列表（默认隐藏，切换模式时可见） -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/thumbnailRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="96dp"
+        android:layout_gravity="bottom"
+        android:layout_marginBottom="72dp"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:visibility="gone" />
 
     <!-- 控制按钮栏，底部浮动 -->
     <LinearLayout
         android:id="@+id/controlPanel"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="56dp"
         android:layout_gravity="bottom"
         android:orientation="horizontal"
-        android:background="@android:color/transparent"
-        android:padding="8dp"
-        android:gravity="center"
-        android:layout_marginBottom="16dp">
+        android:background="#66000000"
+        android:padding="6dp"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
 
-        <Button android:id="@+id/btnDelete"
-            android:layout_width="60dp"
-            android:layout_height="38dp"
-            android:text="🗑" />
+        <Button
+            android:id="@+id/btnDelete"
+            android:layout_width="56dp"
+            android:layout_height="44dp"
+            android:text="🗑"
+            android:layout_marginEnd="6dp" />
 
         <Button
             android:id="@+id/btnPrev"
-            android:layout_width="60dp"
-            android:layout_height="38dp"
-            android:text="⬅️"  />
+            android:layout_width="56dp"
+            android:layout_height="44dp"
+            android:text="⬅️"
+            android:layout_marginEnd="6dp" />
 
         <Button
             android:id="@+id/btnPlayPause"
-            android:layout_width="60dp"
-            android:layout_height="38dp"
-            android:layout_marginStart="12dp"
-            android:layout_marginEnd="12dp"
-            android:text="▶️️" />
+            android:layout_width="56dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:text="▶️" />
 
         <Button
             android:id="@+id/btnNext"
-            android:layout_width="60dp"
-            android:layout_height="38dp"
-            android:text="➡️" />
+            android:layout_width="56dp"
+            android:layout_height="44dp"
+            android:text="➡️"
+            android:layout_marginEnd="6dp" />
+
+        <Button
+            android:id="@+id/btnMode"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:text="缩略图"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
 
         <Button
             android:id="@+id/btnFullscreen"
-            android:layout_width="60dp"
-            android:layout_height="38dp"
-            android:layout_marginStart="12dp"
-            android:text="⛶"/>
+            android:layout_width="56dp"
+            android:layout_height="44dp"
+            android:text="⛶" />
     </LinearLayout>
 
 </FrameLayout>
-
-
-    <!--
-    <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-        <ImageView
-            android:id="@+id/imageView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scaleType="fitCenter"
-            android:adjustViewBounds="true"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="40dp"
-            android:layout_alignParentBottom="true"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:background="#66000000"
-            android:padding="8dp">
-
-            <Button android:id="@+id/btnDelete"
-                android:layout_width="60dp"
-                android:layout_height="38dp"
-                android:text="🗑" />
-
-            <Button
-                android:id="@+id/btnPrev"
-                android:layout_width="60dp"
-                android:layout_height="38dp"
-                android:text="⬅️" />
-
-            <Button
-
-                android:id="@+id/btnPlayPause"
-                android:layout_width="60dp"
-                android:layout_height="38dp"
-                android:text="▶️️" />
-
-            <Button
-                android:id="@+id/btnNext"
-                android:layout_width="60dp"
-                android:layout_height="38dp"
-                android:text="➡️" />
-
-
-            <Button
-                android:id="@+id/btnFullscreen"
-                android:text="⛶"
-                android:layout_width="60dp"
-                android:layout_height="38dp" />
-
-
-        </LinearLayout>
-
-    </RelativeLayout>
-
-     -->

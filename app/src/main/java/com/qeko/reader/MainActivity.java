@@ -92,6 +92,7 @@ public class MainActivity extends Activity {
         Button btnScan = findViewById(R.id.btnScan);
         btnScan.setOnClickListener(v -> scanDocuments());
 
+/*
         //如果目录列表为空，自动刷新
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String bookDirsStr = prefs.getString("BOOK_DIRS", "");
@@ -104,9 +105,10 @@ public class MainActivity extends Activity {
                 }
             }, 1000); // 延迟 1 秒执行
         }
+*/
 
 
-
+/*
         //自动点击听书，可以和loadCachedFolders一起优化
         new Handler().postDelayed(new Runnable() {
             @Override
@@ -116,7 +118,7 @@ public class MainActivity extends Activity {
             }
         }, 1000); // 1秒后执行
 
-        setupExitTimer();
+        setupExitTimer();*/
 /*        findViewById(R.id.btnScan).setOnClickListener(v -> {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 if (!Environment.isExternalStorageManager()) {

@@ -1,173 +1,145 @@
 package com.qeko.reader;
 
+
 import android.app.Activity;
+import android.content.ComponentName;
 import android.content.Context;
-import android.media.AudioManager;
-import android.media.MediaPlayer;
+import android.content.Intent;
+import android.content.ServiceConnection;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.util.Log;
-import android.view.Gravity;
-import android.view.Window;
-import android.view.WindowManager;
-import android.util.DisplayMetrics;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AppCompatActivity;
+
 import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
 
 
 
-public class MusicPlayerActivity extends Activity {
+public class MusicPlayerActivity extends AppCompatActivity {
+    private MusicService musicService;
+    private boolean isBound = false;
+
+    private static final MusicServiceConnector instance = new MusicServiceConnector();
+
+    private ServiceConnection connection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            MusicService.MusicBinder binder = (MusicService.MusicBinder) service;
+            musicService = binder.getService();
+            isBound = true;
+
+            String filePath = getIntent().getStringExtra("filePath");
+            if (filePath != null) {
+                musicService.setMusicFromFilePath(filePath);
+                tvSongTitle.setText( new File(currentMusicUri.getPath()).getName());
+                startSeekBarUpdater();
+                btnPlayPause.setText("⏸️");
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            isBound = false;
+            musicService = null;
+        }
+    };
+
 
     private TextView tvSongTitle, tvCurrentTime;
     private SeekBar seekBar;
-    private Button btnPlayPause, btnNext,  btnRepeatMode;
+    private Button btnPlayPause, btnNext, btnRepeatMode;
 
-    private MediaPlayer mediaPlayer;
-    private List<File> musicFiles = new ArrayList<>();
-    private int currentIndex = 0;
+
+
+
     private Handler handler = new Handler();
     private Runnable updateRunnable;
 
-    private enum RepeatMode {SEQUENTIAL, SHUFFLE, REPEAT_ONE}
-    private RepeatMode repeatMode = RepeatMode.SEQUENTIAL;
+    private Uri currentMusicUri;
 
+    private enum RepeatMode { SEQUENTIAL, SHUFFLE, REPEAT_ONE }
+    private RepeatMode repeatMode = RepeatMode.SEQUENTIAL;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_music_player);
-
-        // 设置窗口高度为屏幕的 1/5
-        LinearLayout layout = findViewById(R.id.musicPlayerRoot);
-        layout.post(() -> {
-            int screenHeight = getResources().getDisplayMetrics().heightPixels;
-            layout.getLayoutParams().height = screenHeight / 5;
-            layout.requestLayout();
-        });
 
         tvSongTitle = findViewById(R.id.tvSongTitle);
         tvCurrentTime = findViewById(R.id.tvCurrentTime);
         seekBar = findViewById(R.id.seekBar);
         btnPlayPause = findViewById(R.id.btnPlayPause);
         btnNext = findViewById(R.id.btnNext);
-/*        btnPrev = findViewById(R.id.btnPrev);*/
         btnRepeatMode = findViewById(R.id.btnRepeatMode);
 
         String filePath = getIntent().getStringExtra("filePath");
         if (filePath != null) {
-            File currentMusic = new File(filePath);
-            File parentDir = currentMusic.getParentFile();
-            if (parentDir != null && parentDir.isDirectory()) {
-                File[] files = parentDir.listFiles();
-                if (files != null) {
-                    for (File f : files) {
-                        if (f.isFile() && isMusicFile(f.getName())) {
-                            musicFiles.add(f);
-                        }
-                    }
-                    currentIndex = musicFiles.indexOf(currentMusic);
-                    if (currentIndex < 0) currentIndex = 0;
-                    initPlayer(currentIndex);
-                }
-            }
+            currentMusicUri = Uri.fromFile(new File(filePath));
         }
 
-        btnPlayPause.setOnClickListener(v -> togglePlayPause());
-        btnNext.setOnClickListener(v -> playNext());
-//        btnPrev.setOnClickListener(v -> playPrev());
+        Intent intent = new Intent(this, MusicService.class);
+        startService(intent);              // 保证服务在后台运行
+        bindService(intent, connection, BIND_AUTO_CREATE); // 绑定服务，方便控制播放
+
+        btnPlayPause.setOnClickListener(v -> {
+            if (!isBound || musicService == null) return;
+
+            if (musicService.isPlaying()) {
+                musicService.pause();
+                btnPlayPause.setText("▶️");
+            } else {
+                if (currentMusicUri != null) {
+
+                    tvSongTitle.setText( new File(currentMusicUri.getPath()).getName());
+                    btnPlayPause.setText("⏸️");
+                    startSeekBarUpdater();
+                    musicService.play(currentMusicUri);
+                }
+            }
+        });
+
+        btnNext.setOnClickListener(v -> {
+
+            musicService.playNext();
+            // TODO: 这里可以调用 musicService.playNext() 等方法，需在服务实现
+            tvSongTitle.setText( new File(currentMusicUri.getPath()).getName());
+            startSeekBarUpdater();
+        });
+
         btnRepeatMode.setOnClickListener(v -> cycleRepeatMode());
 
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser && mediaPlayer != null) {
-                    mediaPlayer.seekTo(progress);
+            public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
+                if (fromUser && isBound && musicService != null) {
+                    musicService.seekTo(progress);
                 }
             }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
+            @Override public void onStartTrackingTouch(SeekBar sb) {}
+            @Override public void onStopTrackingTouch(SeekBar sb) {}
         });
     }
-
-    private boolean isMusicFile(String name) {
-        String lower = name.toLowerCase();
-        return lower.endsWith(".mp3") || lower.endsWith(".wav") || lower.endsWith(".flac");
-    }
-
-    private void initPlayer(int index) {
-
-        if (mediaPlayer != null) {
-            mediaPlayer.stop();
-            mediaPlayer.release();
-        }
-
-        File file = musicFiles.get(index);
-        mediaPlayer = MediaPlayer.create(this, android.net.Uri.fromFile(file));
-        mediaPlayer.setOnCompletionListener(mp -> playNext());
-
-        tvSongTitle.setText(file.getName());
-//        Log.d("TAG", "initPlayer: "+tvSongTitle.getText());
-        seekBar.setMax(mediaPlayer.getDuration());
-
+    private void startSeekBarUpdater() {
         updateRunnable = new Runnable() {
             @Override
             public void run() {
-                if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-                    seekBar.setProgress(mediaPlayer.getCurrentPosition());
-                    tvCurrentTime.setText(formatTime(mediaPlayer.getCurrentPosition()) + " / " + formatTime(mediaPlayer.getDuration()));
+                if (isBound && musicService != null && musicService.isPlaying()) {
+                    int currentPos = musicService.getCurrentPosition();
+                    int duration = musicService.getDuration();
+                    seekBar.setMax(duration);
+                    seekBar.setProgress(currentPos);
+                    tvCurrentTime.setText(formatTime(currentPos) + " / " + formatTime(duration));
                 }
                 handler.postDelayed(this, 500);
             }
         };
-
-        mediaPlayer.start();
-        btnPlayPause.setText("⏸️");
         handler.post(updateRunnable);
     }
-
-    private void togglePlayPause() {
-        if (mediaPlayer != null) {
-            if (mediaPlayer.isPlaying()) {
-                mediaPlayer.pause();
-                btnPlayPause.setText("▶️");
-            } else {
-                mediaPlayer.start();
-                btnPlayPause.setText("⏸️");
-            }
-        }
-    }
-
-    private void playNext() {
-        switch (repeatMode) {
-            case SHUFFLE:
-                currentIndex = new Random().nextInt(musicFiles.size());
-                break;
-            case REPEAT_ONE:
-                // index unchanged
-                break;
-            case SEQUENTIAL:
-            default:
-                currentIndex = (currentIndex + 1) % musicFiles.size();
-                break;
-        }
-        initPlayer(currentIndex);
-    }
-
-/*    private void playPrev() {
-        currentIndex = (currentIndex - 1 + musicFiles.size()) % musicFiles.size();
-        initPlayer(currentIndex);
-    }*/
 
     private void cycleRepeatMode() {
         switch (repeatMode) {
@@ -184,6 +156,9 @@ public class MusicPlayerActivity extends Activity {
                 btnRepeatMode.setText("🔁");
                 break;
         }
+        if (isBound && musicService != null) {
+            musicService.setRepeatMode(repeatMode.name());
+        }
     }
 
     private String formatTime(int millis) {
@@ -193,13 +168,47 @@ public class MusicPlayerActivity extends Activity {
         return String.format("%02d:%02d", minutes, seconds);
     }
 
+
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        handler.removeCallbacks(updateRunnable);
-        if (mediaPlayer != null) {
-            mediaPlayer.stop();
-            mediaPlayer.release();
-        }
+    protected void onStart() {
+        super.onStart();
+        MusicServiceConnector.getInstance().bind(this, service -> {
+            musicService = service;
+
+            // 注册监听器
+            musicService.setOnTrackChangeListener(newTrack -> runOnUiThread(() -> {
+                currentMusicUri = Uri.fromFile(newTrack);
+                tvSongTitle.setText(newTrack.getName());
+                startSeekBarUpdater();
+            }));
+
+            String filePath = getIntent().getStringExtra("filePath");
+            if (filePath != null) {
+                musicService.setMusicFromFilePath(filePath);
+            }
+        });
     }
+
+/*    @Override
+    protected void onStart() {
+        super.onStart();
+        Intent intent = new Intent(this, MusicService.class);
+        bindService(intent, connection, Context.BIND_AUTO_CREATE);
+    }*/
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        MusicServiceConnector.getInstance().unbind(this);
+    }
+
+    /*
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (isBound) {
+            unbindService(connection);
+            isBound = false;
+        }
+    }*/
 }
