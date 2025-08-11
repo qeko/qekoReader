@@ -92,52 +92,6 @@ public class MainActivity extends Activity {
         Button btnScan = findViewById(R.id.btnScan);
         btnScan.setOnClickListener(v -> scanDocuments());
 
-/*
-        //如果目录列表为空，自动刷新
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String bookDirsStr = prefs.getString("BOOK_DIRS", "");
-
-        if (bookDirsStr.isEmpty()) {
-            btnScan.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    scanDocuments();
-                }
-            }, 1000); // 延迟 1 秒执行
-        }
-*/
-
-
-/*
-        //自动点击听书，可以和loadCachedFolders一起优化
-        new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                // 模拟点击事件
-                switchCategory(new BookFileStrategy(), "BOOK_DIRS");
-            }
-        }, 1000); // 1秒后执行
-
-        setupExitTimer();*/
-/*        findViewById(R.id.btnScan).setOnClickListener(v -> {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                if (!Environment.isExternalStorageManager()) {
-                    startActivity(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION));
-                    return;
-                }
-            } else {
-                requestPermissions(new String[]{
-                        Manifest.permission.READ_EXTERNAL_STORAGE,
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE
-                }, 1);
-
-
-            }
-
-            // 默认显示书籍
-            switchCategory(new BookFileStrategy(), "BOOK_DIRS");
-        });*/
-
 
 
     }
@@ -221,6 +175,7 @@ public class MainActivity extends Activity {
         }*/
     }
 
+/*
     private void showFiles(List<File> files) {
         folderMap.clear();
         for (File file : files) {
@@ -240,6 +195,8 @@ public class MainActivity extends Activity {
             List<FileItem> childItems = new ArrayList<>();
             for (File f : filesInFolder) {
                 FileItem item = new FileItem(f, false);
+                应该是在这里处理 读出保存的最后文件进行比较，如果相等则 显示红色，带 上ic-pin 图标，
+                不太清楚置顶要如何处理？
                 childItems.add(item);
             }
             folderItem.setChildren(childItems);
@@ -258,7 +215,78 @@ public class MainActivity extends Activity {
             }
         });
     }
+*/
 
+    private void showFiles(List<File> files) {
+        folderMap.clear();
+
+        // 读取最近访问文件列表（示例，需你实现）
+        List<String> pinnedPaths = loadPinnedFilePaths();
+
+        for (File file : files) {
+            File parent = file.getParentFile();
+            folderMap.computeIfAbsent(parent, k -> new ArrayList<>()).add(file);
+        }
+
+        displayItems.clear();
+        for (Map.Entry<File, List<File>> entry : folderMap.entrySet()) {
+            File folder = entry.getKey();
+            List<File> filesInFolder = entry.getValue();
+
+            FileItem folderItem = new FileItem(folder, true);
+            folderItem.setDocumentCount(filesInFolder.size());
+            folderItem.setExpanded(true);
+
+            List<FileItem> childItems = new ArrayList<>();
+            for (File f : filesInFolder) {
+                FileItem item = new FileItem(f, false);
+
+                if (pinnedPaths.contains(f.getAbsolutePath())) {
+                    item.setPinned(true);
+                }
+                childItems.add(item);
+            }
+
+            // 置顶文件排序
+            Collections.sort(childItems, (a, b) -> {
+                if (a.isPinned() && !b.isPinned()) return -1;
+                else if (!a.isPinned() && b.isPinned()) return 1;
+                else return a.getFile().getName().compareToIgnoreCase(b.getFile().getName());
+            });
+
+            folderItem.setChildren(childItems);
+            displayItems.add(folderItem);
+        }
+
+        adapter.setData(displayItems);
+
+        adapter = new FileAdapter(displayItems);
+        recyclerView.setAdapter(adapter);
+
+        adapter.setOnItemClickListener(item -> {
+            if (item.isFolder()) {
+                item.setExpanded(!item.isExpanded());
+                adapter.refreshDisplayItems();
+            } else {
+                openFile(item.getFile());
+            }
+        });
+    }
+
+
+    private List<String> loadPinnedFilePaths() {
+        SharedPreferences sp = getSharedPreferences("recent_files", MODE_PRIVATE);
+        Set<String> pinnedSet = sp.getStringSet("pinned_paths", new HashSet<>());
+        return new ArrayList<>(pinnedSet);
+    }
+
+    // 打开文件后保存最近访问文件路径示例
+    private void savePinnedFilePath(String path) {
+        SharedPreferences sp = getSharedPreferences("recent_files", MODE_PRIVATE);
+        Set<String> pinnedSet = sp.getStringSet("pinned_paths", new HashSet<>());
+        pinnedSet.add(path);
+        sp.edit().putStringSet("pinned_paths", pinnedSet).apply();
+    }
 
     private void scanDocuments() {
         Toast.makeText(this, "正在扫描，请稍候...", Toast.LENGTH_SHORT).show();
@@ -332,9 +360,9 @@ public class MainActivity extends Activity {
 
     private void openFile(File file) {
 
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                .edit().putString(LAST_FILE_PATH, file.getAbsolutePath()).apply();
 
+
+            savePinnedFilePath(file.getAbsolutePath());
 
             String name = file.getName().toLowerCase();
 

@@ -49,6 +49,15 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
         notifyDataSetChanged();
     }
 
+    /** MainActivity中调用，用于更新列表数据 **/
+    public void setData(List<FileItem> newItems) {
+        visibleItems.clear();
+        if (newItems != null) {
+            visibleItems.addAll(newItems);
+        }
+        notifyDataSetChanged();
+    }
+
     public FileItem getItemAt(int position) {
         return visibleItems.get(position);
     }
@@ -66,9 +75,9 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
         FileItem item = visibleItems.get(position);
         holder.bind(item, listener);
 
-        if (item.isLastRead()) {
+        if (item.isPinned()) {
             holder.title.setTextColor(Color.RED);
-            holder.icon.setImageResource(R.drawable.ic_pin);  // 📌图标
+            holder.icon.setImageResource(R.drawable.ic_pin);  // 📌图标  这行没生效，问题不大
         } else {
             holder.title.setTextColor(Color.BLACK);
             holder.icon.setImageResource(item.isFolder()
