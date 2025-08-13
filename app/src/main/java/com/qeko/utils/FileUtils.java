@@ -2,9 +2,16 @@
 
 package com.qeko.utils;
 
+/*import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfReader;
+import com.itextpdf.kernel.pdf.canvas.parser.PdfTextExtractor;
+import com.itextpdf.kernel.pdf.canvas.parser.listener.LocationTextExtractionStrategy;*/
+
+
 import static android.content.ContentValues.TAG;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import android.content.Context;
@@ -12,11 +19,17 @@ import android.content.SharedPreferences;
 import android.content.res.AssetManager;
 import android.text.TextUtils;
 
+//import androidx.pdf.PdfDocument;
 import androidx.preference.PreferenceManager;
 
-import com.itextpdf.text.pdf.PdfReader;
-import com.itextpdf.text.pdf.parser.PdfTextExtractor;
+/*import com.itextpdf.text.pdf.PdfReader;
+import com.itextpdf.text.pdf.parser.PdfTextExtractor;*/
 
+
+//import com.itextpdf.text.pdf.parser.SimpleTextExtractionStrategy;
+import com.itextpdf.text.pdf.PdfReader;
+import com.itextpdf.text.pdf.parser.LocationTextExtractionStrategy;
+import com.itextpdf.text.pdf.parser.PdfTextExtractor;
 import com.qeko.reader.FileTypeStrategy;
 import com.qeko.reader.PdfReaderActivity;
 /*import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
@@ -31,12 +44,16 @@ import com.tom_roush.pdfbox.text.PDFTextStripper;*/
 import java.io.File;
 
 import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import android.util.Log;
+
+import org.mozilla.universalchardet.UniversalDetector;
 
 public class FileUtils {
     // 递归扫描 .txt 文件
@@ -249,21 +266,81 @@ public class FileUtils {
      * @param fontAssetPath assets 中字体文件路径，例如 "fonts/SimsunExtG.ttf"
      * @return 提取到的文本
      */
-    public static String extractTextFromPdf(File file, Context context, String fontAssetPath) {
+  /*  public static String extractTextFromPdf(File file, Context context, String fontAssetPath) {
         StringBuilder text = new StringBuilder();
+
+        PdfDocument pdfDoc = null;
+        try {
+            // 仍然保留字体复制逻辑，接口一致（虽然iText7不会直接用它）
+            File fontFile = copyFontFromAssets(context, fontAssetPath);
+
+            // 打开 PDF
+            pdfDoc = new PdfDocument(new PdfReader(file));
+
+            int numPages = pdfDoc.getNumberOfPages();
+            // 测试时只读取前2页，可改成 numPages
+            numPages = Math.min(numPages, 2);
+
+            for (int i = 1; i <= numPages; i++) {
+                // 使用 LocationTextExtractionStrategy 保持文字顺序
+                String pageText = PdfTextExtractor.getTextFromPage(
+                        pdfDoc.getPage(i),
+                        new LocationTextExtractionStrategy()
+                );
+                text.append(pageText).append("\n");
+            }
+
+            Log.d(TAG, "PDF 文本提取完成，共 " + numPages + " 页");
+        } catch (Exception e) {
+            Log.e(TAG, "extractTextFromPdf 出错", e);
+        } finally {
+            if (pdfDoc != null) {
+                pdfDoc.close();
+            }
+        }
+//        Log.d("DEBUG", "extractTextFromPdf=" + Arrays.toString(text.toString().getBytes()));
+        return text.toString();
+    }*/
+/*        StringBuilder text = new StringBuilder();
+        try {
+            PdfDocument pdfDoc = new PdfDocument(new PdfReader(file));
+            int numPages = pdfDoc.getNumberOfPages();
+            for (int i = 1; i <= numPages; i++) {
+                String pageText = PdfTextExtractor.getTextFromPage(pdfDoc.getPage(i));
+                text.append(pageText).append("\n");
+            }
+            pdfDoc.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return text.toString();*/
+
+
+    public static String extractTextFromPdf(File file, Context context, String fontAssetPath) {
+             StringBuilder text = new StringBuilder();
 
         PdfReader reader = null;
         try {
             // 确保字体文件从 assets 拷贝到临时路径（即使 iText 不直接用它，也方便后续扩展）
+
             File fontFile = copyFontFromAssets(context, fontAssetPath);
 
             // 打开 PDF
             reader = new PdfReader(file.getAbsolutePath());
 
             int numPages = reader.getNumberOfPages();
+            numPages = 2;
             for (int i = 1; i <= numPages; i++) {
                 String pageText = PdfTextExtractor.getTextFromPage(reader, i);
+//                String rawText = PdfTextExtractor.getTextFromPage(reader, i, new LocationTextExtractionStrategy());
+
+//                text.append(pageText).append("\n");
+
+                // 强制转为 UTF-8 避免乱码
+//                String utf8Text = new String(rawText.getBytes("ISO-8859-1"), "UTF-8");
+
                 text.append(pageText).append("\n");
+
             }
 
             Log.d(TAG, "PDF 文本提取完成，共 " + numPages + " 页");
@@ -275,6 +352,28 @@ public class FileUtils {
             }
         }
         return text.toString();
+    }
+
+
+
+    private static Charset detectEncoding(File file) {
+        byte[] buf = new byte[4096];
+        try (FileInputStream fis = new FileInputStream(file)) {
+            UniversalDetector detector = new UniversalDetector(null);
+            int nread;
+            while ((nread = fis.read(buf)) > 0 && !detector.isDone()) {
+                detector.handleData(buf, 0, nread);
+            }
+            detector.dataEnd();
+            String encoding = detector.getDetectedCharset();
+            detector.reset();
+            if (encoding != null) {
+                return Charset.forName(encoding);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return Charset.forName("GBK");
     }
 
     /**

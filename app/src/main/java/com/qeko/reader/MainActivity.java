@@ -22,11 +22,13 @@ import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 
+import com.bumptech.glide.Glide;
 import com.qeko.utils.FileAdapter;
 import com.qeko.utils.FileItem;
 import com.qeko.utils.FileUtils;
@@ -50,6 +52,12 @@ public class MainActivity extends Activity {
     private Handler handler = new Handler(Looper.getMainLooper());
     private Runnable exitRunnable;
 
+    private ControlActivity controlActivity;
+
+    private RecyclerView rvImages;
+    private Button btnSwitchView;
+    private boolean isGrid = true; // 当前是否为网格视图
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -58,7 +66,8 @@ public class MainActivity extends Activity {
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-
+//        rvImages = findViewById(R.id.rvImages);
+//        btnSwitchView = findViewById(R.id.btnSwitchView);
 
         adapter = new FileAdapter(displayItems);
         recyclerView.setAdapter(adapter);
@@ -66,12 +75,21 @@ public class MainActivity extends Activity {
         btnImages = findViewById(R.id.btnImages);
         btnMusic = findViewById(R.id.btnMusic);
         btnVideo = findViewById(R.id.btnVideo);
+//        btnSetting = findViewById(R.id.btnSetting);
+
+
 
         btnBooks.setOnClickListener(v -> switchCategory(new BookFileStrategy(), "BOOK_DIRS"));
         btnImages.setOnClickListener(v -> switchCategory(new ImageFileStrategy(), "IMAGE_DIRS"));
         btnMusic.setOnClickListener(v -> switchCategory(new MusicFileStrategy(), "MUSIC_DIRS"));
         btnVideo.setOnClickListener(v -> switchCategory(new VideoFileStrategy(), "VIDEO_DIRS"));
+        switchCategory(new BookFileStrategy(), "BOOK_DIRS");
+//        controlActivity = new ControlActivity(findViewById(R.id.controlPanel), this);
 
+//        btnSetting.setOnClickListener(v -> controlActivity.toggleVisibility());
+
+
+//        controlActivity.toggleVisibility();
         ensureStoragePermission();
 
 
@@ -96,6 +114,10 @@ public class MainActivity extends Activity {
 
     }
 
+    private List<File> loadImageFiles() {
+        // TODO: 递归扫描或读取保存的图片目录文件列表
+        return new ArrayList<>();
+    }
 
     public List<File> reloadWithStrategy(Context context, FileTypeStrategy strategy, String cacheKey) {
         Set<String> cachedDirs = ScanCacheManager.getCachedDirs(context, cacheKey);
@@ -217,6 +239,14 @@ public class MainActivity extends Activity {
     }
 */
 
+    private boolean isImageFile(File file) {
+        String name = file.getName().toLowerCase();
+        return name.endsWith(".jpg") || name.endsWith(".jpeg") ||
+                name.endsWith(".png") || name.endsWith(".gif") ||
+                name.endsWith(".bmp") || name.endsWith(".webp");
+    }
+
+
     private void showFiles(List<File> files) {
         folderMap.clear();
 
@@ -241,7 +271,24 @@ public class MainActivity extends Activity {
             for (File f : filesInFolder) {
                 FileItem item = new FileItem(f, false);
 
-                if (pinnedPaths.contains(f.getAbsolutePath())) {
+
+                // 判断是否图片（仅当 ImageFileStrategy 时）
+                // 如果是图片文件，直接加载缩略图
+/*                if (isImageFile(f)) {
+                    item.setUseThumbnail(true);
+                }*/
+
+/*                if (isImageFile(f)) {
+                    // 使用 Glide 加载缩略图
+                    Glide.with(this)
+                            .load(f)
+                            .placeholder(R.drawable.ic_image_placeholder) // 占位图
+                            .centerCrop();
+//                            .into(item.getIconImageView()); // 你的 Item 里要有 ImageView 引用
+                }*/
+
+
+                if (!isImageFile(f) && pinnedPaths.contains(f.getAbsolutePath())) {
                     item.setPinned(true);
                 }
                 childItems.add(item);
@@ -285,7 +332,7 @@ public class MainActivity extends Activity {
         SharedPreferences sp = getSharedPreferences("recent_files", MODE_PRIVATE);
         Set<String> pinnedSet = sp.getStringSet("pinned_paths", new HashSet<>());
         pinnedSet.add(path);
-        sp.edit().putStringSet("pinned_paths", pinnedSet).apply();
+        sp.edit().putStringSet("pinned_paths", pinnedSet);//.apply();
     }
 
     private void scanDocuments() {
@@ -367,11 +414,11 @@ public class MainActivity extends Activity {
             String name = file.getName().toLowerCase();
 
             Intent intent = null;
-
-            if (name.endsWith(".txt")) {
+        if (name.endsWith(".txt")|| name.endsWith(".pdf")) {
+//            if (name.endsWith(".txt")) {
                 intent = new Intent(this, ReaderActivity.class);
-            } else if (name.endsWith(".pdf")) {
-                intent = new Intent(this, PdfReaderActivity.class);
+//            } else if (name.endsWith(".pdf")) {
+//                intent = new Intent(this, PdfReaderActivity.class);
             } else if (name.endsWith(".epub")) {
                 intent = new Intent(this, EpubReaderActivity.class);  // 需实现
             } else if (name.endsWith(".mobi")) {
@@ -393,6 +440,7 @@ public class MainActivity extends Activity {
                 Toast.makeText(this, "无法打开该类型的文件: " + name, Toast.LENGTH_SHORT).show();
             }
         }
+/*
 
     private void setupExitTimer() {  //change后执行
         Spinner spinner = findViewById(R.id.spinner);
@@ -425,6 +473,7 @@ public class MainActivity extends Activity {
             public void onNothingSelected(AdapterView<?> parent) {}
         });
     }
+*/
 
     @Override
     protected void onDestroy() {

@@ -2,6 +2,7 @@ package com.qeko.reader;
 
 import android.app.Dialog;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
@@ -27,6 +28,7 @@ import androidx.preference.PreferenceManager;
 
 import com.qeko.tts.TextToSpeechManager;
 import com.qeko.utils.AppPreferences;
+import com.qeko.utils.FileUtils;
 
 import org.mozilla.universalchardet.UniversalDetector;
 
@@ -35,11 +37,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 //import com.ibm.icu.text.Transliterator;
 
-public class ReaderActivity extends AppCompatActivity {
+    public class ReaderActivity extends AppCompatActivity {
     private AppPreferences appPreferences;
     public TextView textView;
     private Button btnTTS;
@@ -62,7 +66,7 @@ public class ReaderActivity extends AppCompatActivity {
     private boolean isInitialLoad = true;
     private String filePath;
     private Dialog loadingDialog;
-
+        private static final String FONT_PATH = "fonts/SimsunExtG.ttf";
     private int lastPage ;
     private  int lastSentence  ;
     private float lineSpacingMultiplier = 1.5f; // 示例值，也可以存储为用户偏好
@@ -88,15 +92,15 @@ public class ReaderActivity extends AppCompatActivity {
         controlActivity = new ControlActivity(findViewById(R.id.controlPanel), this);
 
         textView.setTextSize(fontSize);
+//
 
         textView.setLineSpacing(5, lineSpacingMultiplier);
 
         restoreUserSettings();
 
         filePath = getIntent().getStringExtra("filePath");
-//        if (filePath == null) {
-//            filePath = appPreferences.getLastFilePath();
-//        }
+
+
 
         if (filePath != null && new File(filePath).exists()) {
             loadText(filePath);
@@ -147,16 +151,26 @@ public class ReaderActivity extends AppCompatActivity {
         }
     }
 
-    private void loadText(String path) {
-        try {
-            File file = new File(path);
-            Charset charset = detectEncoding(file);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), charset));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) sb.append(line).append("\n");
-            reader.close();
-            fullText = sb.toString();
+        private void loadText(String path) {
+            try {
+                File file = new File(path);
+
+                if(path.endsWith(".pdf")|| path.endsWith(".PDF")) {
+                    fullText = FileUtils.extractTextFromPdf(file, this, "fonts/SimsunExtG.ttf");
+
+
+                    textView.setText(fullText);
+                } else {
+
+                    Charset charset = detectEncoding(file);
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), charset));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) sb.append(line).append("\n");
+                    reader.close();
+                    fullText = sb.toString();
+                }
+
         } catch (Exception e) {
             Toast.makeText(this, "读取失败", Toast.LENGTH_SHORT).show();
             fullText = "";

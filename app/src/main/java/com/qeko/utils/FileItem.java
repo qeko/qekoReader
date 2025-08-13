@@ -7,6 +7,7 @@ import java.io.File;import java.util.List;
 
 public class FileItem {
     private final File file;
+    private boolean useThumbnail; // 新增字段
     private final boolean isFolder;
     public long size;
     private boolean isExpanded = false;
@@ -16,11 +17,14 @@ public class FileItem {
     private int pageCount;
     private int charsPerPage;
     private boolean pinned;
+    private boolean isImage; // 是否图片文件
     public FileItem(File file, boolean isFolder) {
         this.file = file;
         this.isFolder = isFolder;
     }
 
+    public boolean isImage() { return isImage; }
+    public void setImage(boolean image) { isImage = image; }
     public File getFile() {
         return file;
     }
@@ -61,7 +65,9 @@ public class FileItem {
         this.children = children;
     }
 
-
+    public void setUseThumbnail(boolean useThumbnail) {
+        this.useThumbnail = useThumbnail;
+    }
 
     public void setPageCount(int pageCount) {
         this.pageCount = pageCount;

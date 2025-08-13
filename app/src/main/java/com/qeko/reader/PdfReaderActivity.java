@@ -8,6 +8,7 @@ import android.speech.tts.TextToSpeech;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.style.BackgroundColorSpan;
+import android.util.Log;
 import android.view.View;
 import android.view.animation.AnimationUtils;
 import android.widget.Button;
@@ -24,6 +25,7 @@ import com.qeko.utils.FileUtils;
 import com.qeko.utils.SentenceSplitter;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.List;
 
 public class PdfReaderActivity extends AppCompatActivity {
@@ -70,8 +72,9 @@ public class PdfReaderActivity extends AppCompatActivity {
         try {
             File file = new File(pdfFilePath);
 
+//            fileContent = FileUtils.extractTextFromPdf(file, this, "fonts/SimsunExtG.ttf"); // 确保字体文件存在
             fileContent = FileUtils.extractTextFromPdf(file, this, "fonts/SimsunExtG.ttf"); // 确保字体文件存在
-
+            Log.d("DEBUG", "content bytes=" + Arrays.toString(fileContent.getBytes()));
             pages = SentenceSplitter.splitToPages(fileContent, 300); // 可自适应
             updatePage(currentPage);
         } catch (Exception e) {

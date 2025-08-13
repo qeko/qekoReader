@@ -13,6 +13,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.qeko.reader.R;
 
 import java.io.File;
@@ -70,7 +71,75 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
         return new ViewHolder(view);
     }
 
+
     @Override
+    public void onBindViewHolder(@NonNull FileAdapter.ViewHolder holder, int position) {
+        FileItem item = visibleItems.get(position);
+        holder.bind(item, listener);
+
+        // 设置隔行背景色
+        int backgroundColor = (position % 2 == 0) ? Color.parseColor("#FFFFFF") : Color.parseColor("#F5F5F5");
+        holder.itemView.setBackgroundColor(backgroundColor);
+
+        // 选中项高亮
+        if (item.isLastRead()) {
+            holder.itemView.setBackgroundColor(Color.parseColor("#D0F0C0")); // 浅绿色
+        }
+
+        // ===== 显示文件名 =====
+        holder.title.setText(item.getFile().getName());
+
+        // ===== 置顶文件 =====
+        if (item.isPinned()) {
+            holder.title.setTextColor(Color.RED);
+//            holder.icon.setImageResource(R.drawable.ic_pin);
+            return; // 置顶的就不再判断类型，直接结束
+        } else {
+            holder.title.setTextColor(Color.BLACK);
+        }
+
+        // ===== 文件夹处理 =====
+        if (item.isFolder()) {
+            holder.icon.setImageResource(R.drawable.ic_folder_closed);
+            return;
+        }
+
+        // ===== 图片文件处理（缩略图） =====
+        String name = item.getFile().getName().toLowerCase();
+        if (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") ||
+                name.endsWith(".gif") || name.endsWith(".bmp") || name.endsWith(".webp")) {
+            Glide.with(holder.itemView.getContext())
+                    .load(item.getFile())
+                    .placeholder(R.drawable.ic_image_placeholder)
+                    .centerCrop()
+                    .into(holder.icon);
+            return;
+        }
+
+        // ===== 其他文件类型图标 =====
+        if (name.endsWith(".txt")) {
+            holder.icon.setImageResource(R.drawable.ic_file);
+        } else if (name.endsWith(".pdf")) {
+            holder.icon.setImageResource(R.drawable.ic_pdf);
+        } else if (name.endsWith(".epub")) {
+            holder.icon.setImageResource(R.drawable.ic_epub);
+        } else if (name.endsWith(".mobi") || name.endsWith(".azw") || name.endsWith(".azw3")) {
+            holder.icon.setImageResource(R.drawable.ic_ebook);
+        } else if (name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".flac")) {
+            holder.icon.setImageResource(R.drawable.ic_music);
+        } else if (name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".avi")) {
+            holder.icon.setImageResource(R.drawable.ic_video);
+        } else {
+            holder.icon.setImageResource(R.drawable.ic_file); // 默认
+        }
+
+        // ===== 点击事件 =====
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) listener.onItemClick(item);
+        });
+    }
+
+    /*@Override
     public void onBindViewHolder(@NonNull FileAdapter.ViewHolder holder, int position) {
         FileItem item = visibleItems.get(position);
         holder.bind(item, listener);
@@ -79,11 +148,29 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
             holder.title.setTextColor(Color.RED);
             holder.icon.setImageResource(R.drawable.ic_pin);  // 📌图标  这行没生效，问题不大
         } else {
+            if (item.isPinned()) {
+                holder.icon.setImageResource(R.drawable.ic_pin); // 置顶图标
+                holder.title.setTextColor(Color.RED);
+            } else if (item.isImage()) {
+                // 图片文件 → 显示缩略图
+
+                Glide.with(holder.itemView.getContext())
+                        .load(item.getFile())
+                        .placeholder(R.drawable.ic_image_placeholder)
+                        .centerCrop()
+                        .into(holder.icon);
+                holder.title.setTextColor(Color.BLACK);
+            } else {
+                holder.icon.setImageResource(R.drawable.ic_file);
+                holder.title.setTextColor(Color.BLACK);
+            }
+        }
+*//*        } else {
             holder.title.setTextColor(Color.BLACK);
             holder.icon.setImageResource(item.isFolder()
                     ? (item.isExpanded() ? R.drawable.ic_folder_open : R.drawable.ic_folder_closed)
                     : R.drawable.ic_file);
-        }
+        }*//*
 
 
         // ✅ 设置隔行背景色
@@ -124,7 +211,7 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
             if (listener != null) listener.onItemClick(item);
         });
 
-    }
+    }*/
 
 
     @Override

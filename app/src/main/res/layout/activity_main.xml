@@ -60,6 +60,7 @@
     <!-- 定时退出 -->
     <LinearLayout
         android:orientation="horizontal"
+        android:layout_gravity="center"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp">
@@ -70,13 +71,40 @@
             android:layout_height="wrap_content"
             android:text="🔄 刷新" />
 
-        <Spinner
+<!--        <Button
+            android:id="@+id/btnSetting"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="🔄 设置" />--><!--        <Button
+            android:id="@+id/btnSetting"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="🔄 设置" />-->
+        <!--图片时显示  android:visibility="gone" -->
+ <!--       <Button
+            android:id="@+id/btnSwitchView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+
+            android:text="切换视图" />
+-->
+<!--
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvImages"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+
+            android:layout_weight="1" />
+-->
+
+  <!--      <Spinner
             android:id="@+id/spinner"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:spinnerMode="dialog"
             android:entries="@array/spinner_items"/>
-
 
 
     <TextView
@@ -86,10 +114,17 @@
         android:layout_gravity="center_vertical"
         android:text="分钟后退出"
         android:paddingStart="8dp" />
+-->
+
 
 
 
 </LinearLayout>
+    <include
+        android:id="@+id/controlPanel"
+        layout="@layout/activity_control"
+        android:visibility="gone"
+        android:background="@android:color/transparent" />
 
 </LinearLayout>
 
