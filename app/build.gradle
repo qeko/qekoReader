@@ -62,10 +62,23 @@ dependencies {
 //    implementation 'com.github.FolioReader:FolioReader-Android:v0.5.4'
 //    implementation "com.folioreader:folioreader:0.5.4"
 //    implementation 'org.epublib:epublib-core:3.1'
-//    implementation 'com.github.jabbink:epublib-android:0.6.0'
+////    implementation 'com.github.jabbink:epublib-android:0.6.0'
 //    implementation 'nl.siegmann.epublib:epublib-core:3.1'
+//// https://mvnrepository.com/artifact/com.github.FolioReader/FolioReader-Android
+//    implementation 'org.epublib:epublib-core:4.0.0'
 
-
+    // https://mvnrepository.com/artifact/nl.siegmann.epublib/epublib-core
+//    implementation("nl.siegmann.epublib:epublib-core:3.1")
+// https://mvnrepository.com/artifact/eu.freme-project/epublib-core
+    implementation("eu.freme-project:epublib-core:0.5")
+    {
+        exclude group: 'xmlpull', module: 'xmlpull'
+        exclude group: 'net.sf.kxml', module: 'kxml2'
+    }
+//    implementation ('nl.siegmann.epublib:epublib-core:0.5') {
+//        exclude group: 'xmlpull', module: 'xmlpull'
+//        exclude group: 'net.sf.kxml', module: 'kxml2'
+//    }
 
 
 

@@ -168,6 +168,16 @@ import java.util.List;
                         Toast.makeText(this, "首次打开PDF，预处理需要一点时间 " , Toast.LENGTH_SHORT).show();
                         FileUtils.extractTextFromPdf(file, this);
                     }
+                } if (path.toLowerCase().endsWith(".epub")) {
+
+                    textFilePath = path + ".epubtxt";
+                    File txtFile = new File(textFilePath);
+
+                    if (!txtFile.exists()) {
+
+                        FileUtils.extractTextFromEpubByBatch( this,file,txtFile);
+
+                    }
                 } else {
                     // 直接使用原始文件
                     textFilePath = path;
@@ -464,11 +474,18 @@ import java.util.List;
 
     @Override
     protected void onDestroy() {
-        PreferenceManager.getDefaultSharedPreferences(this).edit()
+/*        PreferenceManager.getDefaultSharedPreferences(this).edit()
                 .putString("lastFilePath", getIntent().getStringExtra("filePath"))
                 .putInt("lastPage", currentPage)
                 .putInt("lastSentence", sentenceIndex)
-                .apply();
+                .apply();*/
+
+        appPreferences.setCurrentPage(currentPage);
+        appPreferences.setTotalPages(totalPages);
+        appPreferences.setLastPage(lastPage);
+        appPreferences.setLastSentence(lastSentence);
+        appPreferences.setLastFilePath(filePath);
+        appPreferences.setMaxCharsPerPage(appPreferences.getMaxCharsPerPage());
 
         if (ttsManager != null) {
             ttsManager.stop();

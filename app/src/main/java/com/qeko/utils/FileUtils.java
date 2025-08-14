@@ -10,9 +10,12 @@ import com.itextpdf.kernel.pdf.canvas.parser.listener.LocationTextExtractionStra
 
 import static android.content.ContentValues.TAG;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -27,9 +30,12 @@ import com.itextpdf.text.pdf.parser.PdfTextExtractor;*/
 
 
 //import com.itextpdf.text.pdf.parser.SimpleTextExtractionStrategy;
+//import com.bumptech.glide.load.engine.Resource;
+import  nl.siegmann.epublib.domain.Resource;
 import com.itextpdf.text.pdf.PdfReader;
 import com.itextpdf.text.pdf.parser.LocationTextExtractionStrategy;
 import com.itextpdf.text.pdf.parser.PdfTextExtractor;
+
 import com.qeko.reader.FileTypeStrategy;
 import com.qeko.reader.PdfReaderActivity;
 
@@ -37,7 +43,10 @@ import com.qeko.reader.PdfReaderActivity;
 import java.io.File;
 
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.RandomAccessFile;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -47,6 +56,11 @@ import java.util.Map;
 import android.util.Log;
 
 import org.mozilla.universalchardet.UniversalDetector;
+
+import nl.siegmann.epublib.domain.Book;
+import nl.siegmann.epublib.domain.Spine;
+import nl.siegmann.epublib.domain.SpineReference;
+import nl.siegmann.epublib.epub.EpubReader;
 
 public class FileUtils {
     // 递归扫描 .txt 文件
@@ -383,5 +397,93 @@ public class FileUtils {
         is.close();
 
         return outFile;
+    }
+
+    /**
+     * 按页读取文本文件（TXT/EPUB等）
+     * @param file 待读取文件
+     * @param pageNum 页码（0开始）
+     * @param charsPerPage 每页字符数（近似）
+     * @return 该页的文本
+     */
+    public static String readFilePage(File file, int pageNum, int charsPerPage) {
+        Charset charset = detectEncoding(file);
+        int startOffset = pageNum * charsPerPage;
+
+        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+            long fileLength = raf.length();
+            if (startOffset >= fileLength) return ""; // 超过文件末尾
+
+            raf.seek(startOffset);
+
+            int bytesToRead = (int) Math.min(charsPerPage, fileLength - startOffset);
+            byte[] buffer = new byte[bytesToRead];
+            int readBytes = raf.read(buffer);
+
+            if (readBytes <= 0) return "";
+
+            return new String(buffer, 0, readBytes, charset);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "";
+        }
+    }
+
+    /**
+     * 按 100 页批量提取 EPUB 文本，写入目标 .epubtxt 文件
+     * @param context 上下文
+     * @param epubFile EPUB 文件
+     * @param outputTxtFile 输出的文本文件
+     */
+    public static void extractTextFromEpubByBatch(Context context, File epubFile, File outputTxtFile) {
+        try {
+
+            Log.d(TAG, "extractTextFromEpubByBatch: " +outputTxtFile.getName());
+            Book book = new EpubReader().readEpub(new FileInputStream(epubFile));
+            Spine spine = book.getSpine();
+            List<SpineReference> spineRefs = spine.getSpineReferences();
+            int totalChapters = spineRefs.size();
+
+            int batchSize = 100; // 每批处理 100 个章节
+            int chapterIndex = 0;
+
+            // 如果输出文件存在，先清空
+            if (outputTxtFile.exists()) outputTxtFile.delete();
+
+            while (chapterIndex < totalChapters) {
+                int endIndex = Math.min(chapterIndex + batchSize, totalChapters);
+                StringBuilder sb = new StringBuilder();
+
+                for (int i = chapterIndex; i < endIndex; i++) {
+                    SpineReference ref = spineRefs.get(i);
+                    Resource res = ref.getResource();
+                    if (res != null) {
+                        try {
+                            String html = new String(res.getData(), StandardCharsets.UTF_8);
+                            // 去除 HTML 标签，只保留文本
+                            String text = html.replaceAll("<[^>]+>", "\n").replaceAll("\\s+", " ").trim();
+                            sb.append(text).append("\n");
+                        } catch (Exception e) {
+                            Log.e(TAG, "解析章节失败: " + i, e);
+                        }
+                    }
+                }
+
+                // 追加写入文件
+                try (FileOutputStream fos = new FileOutputStream(outputTxtFile, true);
+                     OutputStreamWriter writer = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
+                    writer.write(sb.toString());
+                    writer.flush();
+                }
+
+                Log.d(TAG, "已处理章节: " + chapterIndex + " ~ " + (endIndex - 1));
+                chapterIndex = endIndex;
+            }
+
+            Log.d(TAG, "EPUB 文本提取完成，保存到：" + outputTxtFile.getAbsolutePath());
+
+        } catch (Exception e) {
+            Log.e(TAG, "extractTextFromEpubByBatch 出错", e);
+        }
     }
 }

@@ -446,13 +446,13 @@ public class MainActivity extends Activity {
             String name = file.getName().toLowerCase();
 
             Intent intent = null;
-        if (name.endsWith(".txt")|| name.endsWith(".pdf")) {
+        if (name.endsWith(".txt")|| name.endsWith(".pdf")|| name.endsWith(".epub")) {
 //            if (name.endsWith(".txt")) {
                 intent = new Intent(this, ReaderActivity.class);
 //            } else if (name.endsWith(".pdf")) {
 //                intent = new Intent(this, PdfReaderActivity.class);
-            } else if (name.endsWith(".epub")) {
-                intent = new Intent(this, EpubReaderActivity.class);  // 需实现
+//            } else if (name.endsWith(".epub")) {
+//                intent = new Intent(this, EpubReaderActivity.class);  // 需实现
             } else if (name.endsWith(".mobi")) {
                 intent = new Intent(this, MobiReaderActivity.class);  // 需实现
             } else if (name.endsWith(".azw") || name.endsWith(".azw3")) {

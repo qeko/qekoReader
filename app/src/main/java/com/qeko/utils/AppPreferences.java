@@ -17,6 +17,11 @@ public class AppPreferences {
     private static final String PREF_SIMPLIFIED = "simplified"; // true简体，false繁体
     private static final String PREF_BRIGHTNESS = "brightness";
 
+//    private static final String PREFS_NAME = "reader_prefs";
+    private static final String KEY_TOTAL_PAGES = "total_pages";
+    private static final String KEY_MAX_CHARS = "max_chars_per_page";
+    private static final String KEY_CURRENT_PAGE = "current_page";
+
     private final SharedPreferences preferences;
 
     public AppPreferences(Context context) {
@@ -103,4 +108,46 @@ public class AppPreferences {
         preferences.edit().putFloat(PREF_BRIGHTNESS, brightness).apply();
     }
 
+
+    // ---------- Total Pages ----------
+    public int getTotalPages() {
+        return preferences.getInt(KEY_TOTAL_PAGES, 0);
+    }
+
+    public void setTotalPages(int totalPages) {
+        preferences.edit().putInt(KEY_TOTAL_PAGES, totalPages).apply();
+    }
+
+
+    // ---------- Max Chars Per Page ----------
+    public int getMaxCharsPerPage() {
+        return preferences.getInt(KEY_MAX_CHARS, 0);
+    }
+
+    public void setMaxCharsPerPage(int maxChars) {
+        preferences.edit().putInt(KEY_MAX_CHARS, maxChars).apply();
+    }
+
+    // ---------- Current Page ----------
+    public int getCurrentPage() {
+        return preferences.getInt(KEY_CURRENT_PAGE, 0);
+    }
+
+    public void setCurrentPage(int page) {
+        preferences.edit().putInt(KEY_CURRENT_PAGE, page).apply();
+    }
+
+
+
+
+
+
+
+
+
+
+
 }
+
+ 
+
