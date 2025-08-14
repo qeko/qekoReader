@@ -327,6 +327,37 @@ public class MainActivity extends Activity {
         return new ArrayList<>(pinnedSet);
     }
 
+    private void savePinnedFilePath(String path) {
+        SharedPreferences sp = getSharedPreferences("recent_files", MODE_PRIVATE);
+        // 用 LinkedHashSet 保证顺序，且避免重复
+        Set<String> pinnedSet = sp.getStringSet("pinned_paths", new LinkedHashSet<>());
+        if (!(pinnedSet instanceof LinkedHashSet)) {
+            pinnedSet = new LinkedHashSet<>(pinnedSet);
+        }
+
+        // 如果已有该路径，先移除再添加，保证最新
+        if (pinnedSet.contains(path)) {
+            pinnedSet.remove(path);
+        }
+        pinnedSet.add(path);
+
+        // 超过5个时，删除最旧的
+        while (pinnedSet.size() > 5) {
+            // LinkedHashSet 没有索引，只能迭代删除第一个元素
+            Iterator<String> it = pinnedSet.iterator();
+            if (it.hasNext()) {
+                it.next();
+                it.remove();
+            }
+        }
+
+        // 保存回 SharedPreferences
+        sp.edit()
+                .putStringSet("pinned_paths", pinnedSet)
+                .apply();
+    }
+
+/*
     // 打开文件后保存最近访问文件路径示例
     private void savePinnedFilePath(String path) {
         SharedPreferences sp = getSharedPreferences("recent_files", MODE_PRIVATE);
@@ -334,6 +365,7 @@ public class MainActivity extends Activity {
         pinnedSet.add(path);
         sp.edit().putStringSet("pinned_paths", pinnedSet);//.apply();
     }
+*/
 
     private void scanDocuments() {
         Toast.makeText(this, "正在扫描，请稍候...", Toast.LENGTH_SHORT).show();

@@ -35,6 +35,7 @@ import org.mozilla.universalchardet.UniversalDetector;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -151,34 +152,51 @@ import java.util.List;
         }
     }
 
+
         private void loadText(String path) {
             try {
                 File file = new File(path);
+                String textFilePath;
 
-                if(path.endsWith(".pdf")|| path.endsWith(".PDF")) {
-                    fullText = FileUtils.extractTextFromPdf(file, this, "fonts/SimsunExtG.ttf");
+                if (path.toLowerCase().endsWith(".pdf")) {
+                    // 处理 PDF -> .pdftxt
+                    textFilePath = path + ".pdftxt";
+                    File txtFile = new File(textFilePath);
 
+                    if (!txtFile.exists()) {
 
-                    textView.setText(fullText);
+                        Toast.makeText(this, "首次打开PDF，预处理需要一点时间 " , Toast.LENGTH_SHORT).show();
+                        FileUtils.extractTextFromPdf(file, this);
+                    }
                 } else {
-
-                    Charset charset = detectEncoding(file);
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), charset));
-                    StringBuilder sb = new StringBuilder();
-                    String line;
-                    while ((line = reader.readLine()) != null) sb.append(line).append("\n");
-                    reader.close();
-                    fullText = sb.toString();
+                    // 直接使用原始文件
+                    textFilePath = path;
                 }
 
-        } catch (Exception e) {
-            Toast.makeText(this, "读取失败", Toast.LENGTH_SHORT).show();
-            fullText = "";
+                fullText = readFileToString(new File(textFilePath));
+
+            } catch (Exception e) {
+                Toast.makeText(this, "读取失败", Toast.LENGTH_SHORT).show();
+                fullText = "";
+            }
+
+            currentPage = lastPage;
+            sentenceIndex = lastSentence;
         }
 
-        currentPage = lastPage; //preferences.getInt("lastPage", 0);
-        sentenceIndex =lastSentence;// preferences.getInt("lastSentence", 0);
-    }
+        /** 将文件完整读取为字符串（自动检测编码） */
+        private String readFileToString(File file) throws IOException {
+            Charset charset = detectEncoding(file);
+            StringBuilder sb = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(new FileInputStream(file), charset))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line).append("\n");
+                }
+            }
+            return sb.toString();
+        }
 
 
      public void buildPageOffsets() {
@@ -482,22 +500,6 @@ import java.util.List;
         textView.setTextColor(fg);
     }
 
-
-/*    private String truncateSentence(String sentence) {
-        sentence = sentence.replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9\\s]{3,}", "");
-        sentence = sentence.replaceAll("[\"“”]", "");
-        sentence = sentence.replaceAll("\\.", "");
-        if (sentence.length() > 50) {
-            int commaIndex = sentence.indexOf("，");
-            if (commaIndex > 0 && commaIndex < 50) {
-                return sentence.substring(0, commaIndex + 1);
-            } else {
-                return sentence.substring(0, 30);
-            }
-        }
-
-        return sentence;
-    }*/
 
 
     public void setFont(String fontName) {

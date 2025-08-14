@@ -32,14 +32,7 @@ import com.itextpdf.text.pdf.parser.LocationTextExtractionStrategy;
 import com.itextpdf.text.pdf.parser.PdfTextExtractor;
 import com.qeko.reader.FileTypeStrategy;
 import com.qeko.reader.PdfReaderActivity;
-/*import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
-import com.tom_roush.pdfbox.pdmodel.PDDocument;
-import com.tom_roush.pdfbox.pdmodel.PDDocumentCatalog;
-import com.tom_roush.pdfbox.pdmodel.PDPageContentStream;
-import com.tom_roush.pdfbox.pdmodel.PDPageTree;
-import com.tom_roush.pdfbox.pdmodel.font.PDFont;
-import com.tom_roush.pdfbox.pdmodel.font.PDType0Font;
-import com.tom_roush.pdfbox.text.PDFTextStripper;*/
+
 
 import java.io.File;
 
@@ -257,65 +250,7 @@ public class FileUtils {
 
         return result;
     }
-
-    /**
-     * 从 PDF 文件提取所有文本（支持中文字体）
-     *
-     * @param file         PDF 文件
-     * @param context      Android Context
-     * @param fontAssetPath assets 中字体文件路径，例如 "fonts/SimsunExtG.ttf"
-     * @return 提取到的文本
-     */
-  /*  public static String extractTextFromPdf(File file, Context context, String fontAssetPath) {
-        StringBuilder text = new StringBuilder();
-
-        PdfDocument pdfDoc = null;
-        try {
-            // 仍然保留字体复制逻辑，接口一致（虽然iText7不会直接用它）
-            File fontFile = copyFontFromAssets(context, fontAssetPath);
-
-            // 打开 PDF
-            pdfDoc = new PdfDocument(new PdfReader(file));
-
-            int numPages = pdfDoc.getNumberOfPages();
-            // 测试时只读取前2页，可改成 numPages
-            numPages = Math.min(numPages, 2);
-
-            for (int i = 1; i <= numPages; i++) {
-                // 使用 LocationTextExtractionStrategy 保持文字顺序
-                String pageText = PdfTextExtractor.getTextFromPage(
-                        pdfDoc.getPage(i),
-                        new LocationTextExtractionStrategy()
-                );
-                text.append(pageText).append("\n");
-            }
-
-            Log.d(TAG, "PDF 文本提取完成，共 " + numPages + " 页");
-        } catch (Exception e) {
-            Log.e(TAG, "extractTextFromPdf 出错", e);
-        } finally {
-            if (pdfDoc != null) {
-                pdfDoc.close();
-            }
-        }
-//        Log.d("DEBUG", "extractTextFromPdf=" + Arrays.toString(text.toString().getBytes()));
-        return text.toString();
-    }*/
-/*        StringBuilder text = new StringBuilder();
-        try {
-            PdfDocument pdfDoc = new PdfDocument(new PdfReader(file));
-            int numPages = pdfDoc.getNumberOfPages();
-            for (int i = 1; i <= numPages; i++) {
-                String pageText = PdfTextExtractor.getTextFromPage(pdfDoc.getPage(i));
-                text.append(pageText).append("\n");
-            }
-            pdfDoc.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return text.toString();*/
-
-
+ /*
     public static String extractTextFromPdf(File file, Context context, String fontAssetPath) {
              StringBuilder text = new StringBuilder();
 
@@ -352,9 +287,62 @@ public class FileUtils {
             }
         }
         return text.toString();
+    }*/
+
+
+    /**
+     * 从PDF提取文字并按100页批次追加写入 .pdftxt 文件
+     * @param pdfFile PDF文件
+     * @param context 上下文
+     * @return 生成的 .pdftxt 文件路径
+     */
+    public static void extractTextFromPdf(File pdfFile, Context context) {
+        String pdfPath = pdfFile.getAbsolutePath();
+        String outputPath = pdfPath + ".pdftxt";
+        File outFile = new File(outputPath);
+
+        if (outFile.exists()) {
+            outFile.delete(); // 确保重新生成
+        }
+
+        FileOutputStream fos = null;
+        PdfReader reader = null;
+
+        try {
+            reader = new PdfReader(pdfPath);
+            int totalPages = reader.getNumberOfPages();
+            fos = new FileOutputStream(outFile, true); // 追加模式
+
+            StringBuilder batchText = new StringBuilder();
+            int batchSize = 100;
+
+            for (int page = 1; page <= totalPages; page++) {
+                String text = PdfTextExtractor.getTextFromPage(reader, page);
+                batchText.append(text).append("\n");
+
+                // 每满100页 或最后一页，写入一次
+                if (page % batchSize == 0 || page == totalPages) {
+                    fos.write(batchText.toString().getBytes("UTF-8"));
+                    fos.flush();
+                    Log.d("FileUtils", "已写入页码: " + (page - batchSize + 1) + "-" + page);
+                    batchText.setLength(0); // 清空 StringBuilder
+                }
+            }
+
+            Log.d("FileUtils", "提取完成，生成: " + outputPath);
+//            return outputPath;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+//            return null;
+
+        } finally {
+            if (reader != null) reader.close();
+            if (fos != null) {
+                try { fos.close(); } catch (IOException ignored) {}
+            }
+        }
     }
-
-
 
     private static Charset detectEncoding(File file) {
         byte[] buf = new byte[4096];

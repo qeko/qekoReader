@@ -64,23 +64,10 @@ public class PdfReaderActivity extends AppCompatActivity {
         ttsManager = new TextToSpeechManager(this, this::onTtsDone);
         ttsManager.setSpeed(speechRate);
 
-        loadPdfText();
         setupUI();
     }
 
-    private void loadPdfText() {
-        try {
-            File file = new File(pdfFilePath);
 
-//            fileContent = FileUtils.extractTextFromPdf(file, this, "fonts/SimsunExtG.ttf"); // 确保字体文件存在
-            fileContent = FileUtils.extractTextFromPdf(file, this, "fonts/SimsunExtG.ttf"); // 确保字体文件存在
-            Log.d("DEBUG", "content bytes=" + Arrays.toString(fileContent.getBytes()));
-            pages = SentenceSplitter.splitToPages(fileContent, 300); // 可自适应
-            updatePage(currentPage);
-        } catch (Exception e) {
-            Toast.makeText(this, "加载PDF失败：" + e.getMessage(), Toast.LENGTH_LONG).show();
-        }
-    }
 
     private void setupUI() {
         btnTTS.setOnClickListener(v -> toggleTTS());
