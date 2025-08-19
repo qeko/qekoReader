@@ -12,8 +12,10 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.Toast;
 import android.app.Activity;
@@ -187,6 +189,20 @@ public class MainActivity extends Activity {
 
 
 
+        ImageView  icon = findViewById(R.id.icon);
+            if ("IMAGE_DIRS".equals(cacheKey)) {
+                ViewGroup.LayoutParams params = icon.getLayoutParams();
+                params.width = params.width * 13;   // 放大3倍
+                params.height = params.height * 13; // 放大3倍
+                icon.setLayoutParams(params);
+
+//                icon.setScaleX(30f);
+//                icon.setScaleY(30f);
+//            ViewGroup.LayoutParams params = icon.getLayoutParams();
+//            params.width = params.width * 3;   // 放大3倍
+//            params.height = params.height * 3; // 放大3倍
+//            icon.setLayoutParams(params);
+        }
         showFiles(files);
 
 /*        View musicPlayerPanel = findViewById(R.id.musicPlayerPanel);
@@ -274,10 +290,24 @@ public class MainActivity extends Activity {
 
                 // 判断是否图片（仅当 ImageFileStrategy 时）
                 // 如果是图片文件，直接加载缩略图
-/*                if (isImageFile(f)) {
-                    item.setUseThumbnail(true);
-                }*/
-
+//                if (isImageFile(f)) {
+//                    item.. icon.setScaleX(1f); // 确保不被放大
+//                    icon.setScaleY(1f);
+////                    item.setUseThumbnail(true);
+//                    layoutParams.width *= 3;
+//                    layoutParams.height *= 3;
+//                    imageView.setLayoutParams(layoutParams);
+//                }
+//                if (switchCategory == IMAGE_DIRS) {
+//                    icon.setScaleX(3.0f);
+//                    icon.setScaleY(3.0f);
+//                }
+//                if (switchCategory == IMAGE_DIRS) {
+//                    ViewGroup.LayoutParams params = icon.getLayoutParams();
+//                    params.width = params.width * 3;   // 放大3倍
+//                    params.height = params.height * 3; // 放大3倍
+//                    icon.setLayoutParams(params);
+//                }
 /*                if (isImageFile(f)) {
                     // 使用 Glide 加载缩略图
                     Glide.with(this)

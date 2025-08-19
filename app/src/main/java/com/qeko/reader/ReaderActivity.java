@@ -80,6 +80,7 @@ import java.util.List;
 
         appPreferences = new AppPreferences(this);
 
+
         textView = findViewById(R.id.textContent);
         btnTTS = findViewById(R.id.btnTTS);
         seekBar = findViewById(R.id.pageSeekBar);
@@ -87,6 +88,9 @@ import java.util.List;
 
         speechRate = appPreferences.getSpeechRate();
         fontSize = appPreferences.getFontSize();
+        currentPage=appPreferences.getCurrentPage();
+        totalPages=appPreferences.getTotalPages();
+
 
 //        if (null == ttsManager)   ttsManager = new TextToSpeechManager(this, speechRate, this::onTtsDone);
 
@@ -154,21 +158,27 @@ import java.util.List;
 
 
         private void loadText(String path) {
+            String textFilePath="";
             try {
                 File file = new File(path);
-                String textFilePath;
 
+//                Toast.makeText(this, "4"+path.toLowerCase().endsWith(".pdf") , Toast.LENGTH_SHORT).show();
                 if (path.toLowerCase().endsWith(".pdf")) {
                     // 处理 PDF -> .pdftxt
                     textFilePath = path + ".pdftxt";
+//                    Toast.makeText(this,"1"+ textFilePath , Toast.LENGTH_SHORT).show();
                     File txtFile = new File(textFilePath);
+//                    Toast.makeText(this, "2"+textFilePath , Toast.LENGTH_SHORT).show();
 
                     if (!txtFile.exists()) {
 
-                        Toast.makeText(this, "首次打开PDF，预处理需要一点时间 " , Toast.LENGTH_SHORT).show();
-                        FileUtils.extractTextFromPdf(file, this);
+                        FileUtils.extractTextFromPdf(file, this,txtFile);
+//                        Toast.makeText(this, "3"+textFilePath , Toast.LENGTH_SHORT).show();
                     }
-                } if (path.toLowerCase().endsWith(".epub")) {
+
+//                    Toast.makeText(this, "4"+textFilePath , Toast.LENGTH_SHORT).show();
+
+                }else if (path.toLowerCase().endsWith(".epub")) {
 
                     textFilePath = path + ".epubtxt";
                     File txtFile = new File(textFilePath);
@@ -178,10 +188,14 @@ import java.util.List;
                         FileUtils.extractTextFromEpubByBatch( this,file,txtFile);
 
                     }
-                } else {
-                    // 直接使用原始文件
+//                    Toast.makeText(this, "5"+textFilePath , Toast.LENGTH_SHORT).show();
+
+                }else{
+
                     textFilePath = path;
                 }
+
+//                Toast.makeText(this, "6"+textFilePath , Toast.LENGTH_SHORT).show();
 
                 fullText = readFileToString(new File(textFilePath));
 
@@ -196,6 +210,7 @@ import java.util.List;
 
         /** 将文件完整读取为字符串（自动检测编码） */
         private String readFileToString(File file) throws IOException {
+//            Toast.makeText(this, "7"+file.getAbsolutePath(), Toast.LENGTH_SHORT).show();
             Charset charset = detectEncoding(file);
             StringBuilder sb = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(
@@ -270,7 +285,7 @@ import java.util.List;
 
 
     private void loadPage(int page) {
-        Log.d("loadPage", "loadPage ");
+        Log.d("loadPage", totalPages+"loadPage "+page);
         if (page < 0 || page >= totalPages) return;
 
 /*      int start = pageOffsets.get(page);
@@ -278,13 +293,15 @@ import java.util.List;
         int start = pageOffsets.get(page);
         int end = (page + 1 < pageOffsets.size()) ? pageOffsets.get(page + 1) : fullText.length();
 
+        Log.d("TAG", start+"loadPage:pageText "+end);
         // 防御：确保 start 和 end 合法
         if (start < 0) start = 0;
         if (end > fullText.length()) end = fullText.length();
         if (end < start) end = start;
 
         String pageText = fullText.substring(start, end);
-        Log.d("TAG", "loadPage:pageText "+pageText);
+//        if (pageText.isEmpty()) loadPage(page+1);
+
         currentSentences = pageText.split("(?<=[.,，?!。！？])");
 
         if (isInitialLoad && page == currentPage) {
@@ -347,12 +364,14 @@ import java.util.List;
 
 
     private void speakNextSentence() {
+            appPreferences.setCurrentPage(currentPage);
         if(currentSentences!=null)
         {
             if (sentenceIndex >= currentSentences.length) {
                 // 当前页读完，自动翻页朗读下一页
                 if (currentPage < totalPages - 1) {
                     currentPage++;
+                    appPreferences.setCurrentPage(currentPage);
                     loadPage(currentPage);
                     speakCurrentPage();
                 } else {

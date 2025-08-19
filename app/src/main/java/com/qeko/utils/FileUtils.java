@@ -37,7 +37,7 @@ import com.itextpdf.text.pdf.parser.LocationTextExtractionStrategy;
 import com.itextpdf.text.pdf.parser.PdfTextExtractor;
 
 import com.qeko.reader.FileTypeStrategy;
-import com.qeko.reader.PdfReaderActivity;
+
 
 
 import java.io.File;
@@ -310,13 +310,13 @@ public class FileUtils {
      * @param context 上下文
      * @return 生成的 .pdftxt 文件路径
      */
-    public static void extractTextFromPdf(File pdfFile, Context context) {
+    public static void extractTextFromPdf(File pdfFile, Context context, File outputTxtFile) {
         String pdfPath = pdfFile.getAbsolutePath();
-        String outputPath = pdfPath + ".pdftxt";
-        File outFile = new File(outputPath);
+//        String outputPath = pdfPath + ".pdftxt";
+//        File outFile = new File(outputPath);
 
-        if (outFile.exists()) {
-            outFile.delete(); // 确保重新生成
+        if (outputTxtFile.exists()) {
+            outputTxtFile.delete(); // 确保重新生成
         }
 
         FileOutputStream fos = null;
@@ -325,7 +325,7 @@ public class FileUtils {
         try {
             reader = new PdfReader(pdfPath);
             int totalPages = reader.getNumberOfPages();
-            fos = new FileOutputStream(outFile, true); // 追加模式
+            fos = new FileOutputStream(outputTxtFile, true); // 追加模式
 
             StringBuilder batchText = new StringBuilder();
             int batchSize = 100;
@@ -343,7 +343,7 @@ public class FileUtils {
                 }
             }
 
-            Log.d("FileUtils", "提取完成，生成: " + outputPath);
+//            Log.d("FileUtils", "提取完成，生成: " );
 //            return outputPath;
 
         } catch (Exception e) {
