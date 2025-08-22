@@ -57,6 +57,7 @@ import java.util.List;
 
     private String fullText = "";
     private List<Integer> pageOffsets = new ArrayList<>();
+    private List<Integer> pageOffsets2 = new ArrayList<>();
     public int currentPage = 0, totalPages = 0;
     private String[] currentSentences;
     private int sentenceIndex = 0;
@@ -76,7 +77,7 @@ import java.util.List;
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_reader);
-        showLoadingDialog();
+//        showLoadingDialog();
 
         appPreferences = new AppPreferences(this);
 
@@ -91,39 +92,55 @@ import java.util.List;
         currentPage=appPreferences.getCurrentPage();
         totalPages=appPreferences.getTotalPages();
 
-
 //        if (null == ttsManager)   ttsManager = new TextToSpeechManager(this, speechRate, this::onTtsDone);
-
         controlActivity = new ControlActivity(findViewById(R.id.controlPanel), this);
-
         textView.setTextSize(fontSize);
 //
-
         textView.setLineSpacing(5, lineSpacingMultiplier);
-
         restoreUserSettings();
-
         filePath = getIntent().getStringExtra("filePath");
 
 
-
-        if (filePath != null && new File(filePath).exists()) {
+        new Thread(() -> {
             loadText(filePath);
-            textView.post(() -> {
-                new Thread(() -> {
-                    buildPageOffsets();
-                    runOnUiThread(() -> {
-                        dismissLoadingDialog();
-                        loadPage(currentPage);
-                    });
-                }).start();
-            });
-        }
+
+            // 优先加载缓存
+            pageOffsets = FileUtils.loadPageOffsets(this, filePath);
+            if (pageOffsets == null) {
+                pageOffsets = new ArrayList<>();
+            }
+
+            if (!pageOffsets.isEmpty()) {
+                totalPages = Math.max(1, pageOffsets.size() - 1);
+                runOnUiThread(() -> {
+                    setupSeekBar();
+//                    dismissLoadingDialog();
+                    loadPage(currentPage);
+                });
+            } else {
+                // 无缓存 -> 重新分页
+                pageOffsets = buildPageOffsets(filePath);
+                if (pageOffsets == null) {
+                    pageOffsets = new ArrayList<>();
+                }
+                totalPages = Math.max(1, pageOffsets.size() - 1);
+
+                FileUtils.savePageOffsets(this, filePath, pageOffsets);
+
+                runOnUiThread(() -> {
+                    setupSeekBar();
+//                    dismissLoadingDialog();
+                    loadPage(currentPage);
+                });
+            }
+        }).start();
+
 
         setupSeekBar();
         setupTouchControl();
         btnTTS.setOnClickListener(v -> toggleSpeaking());
     }
+
 
 
     private void restoreUserSettings() {
@@ -137,23 +154,27 @@ import java.util.List;
     }
 
     private void showLoadingDialog() {
-        if (loadingDialog != null && loadingDialog.isShowing()) return;
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        View view = LayoutInflater.from(this).inflate(R.layout.dialog_loading, null);
-        builder.setView(view);
-        builder.setCancelable(false);
-        loadingDialog = builder.create();
-        if (loadingDialog.getWindow() != null) {
-            loadingDialog.getWindow().setDimAmount(0.5f);
-            loadingDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-        }
-        loadingDialog.show();
+        runOnUiThread(() -> {
+            if (loadingDialog != null && loadingDialog.isShowing()) return;
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            View view = LayoutInflater.from(this).inflate(R.layout.dialog_loading, null);
+            builder.setView(view);
+            builder.setCancelable(false);
+            loadingDialog = builder.create();
+            if (loadingDialog.getWindow() != null) {
+                loadingDialog.getWindow().setDimAmount(0.5f);
+                loadingDialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            }
+            loadingDialog.show();
+        });
     }
 
     private void dismissLoadingDialog() {
-        if (loadingDialog != null && loadingDialog.isShowing()) {
-            loadingDialog.dismiss();
-        }
+        runOnUiThread(() -> {
+            if (loadingDialog != null && loadingDialog.isShowing()) {
+                loadingDialog.dismiss();
+            }
+        });
     }
 
 
@@ -161,53 +182,75 @@ import java.util.List;
             String textFilePath="";
             try {
                 File file = new File(path);
-
-//                Toast.makeText(this, "4"+path.toLowerCase().endsWith(".pdf") , Toast.LENGTH_SHORT).show();
                 if (path.toLowerCase().endsWith(".pdf")) {
                     // 处理 PDF -> .pdftxt
                     textFilePath = path + ".pdftxt";
-//                    Toast.makeText(this,"1"+ textFilePath , Toast.LENGTH_SHORT).show();
                     File txtFile = new File(textFilePath);
-//                    Toast.makeText(this, "2"+textFilePath , Toast.LENGTH_SHORT).show();
-
                     if (!txtFile.exists()) {
 
                         FileUtils.extractTextFromPdf(file, this,txtFile);
-//                        Toast.makeText(this, "3"+textFilePath , Toast.LENGTH_SHORT).show();
                     }
-
-//                    Toast.makeText(this, "4"+textFilePath , Toast.LENGTH_SHORT).show();
-
                 }else if (path.toLowerCase().endsWith(".epub")) {
 
                     textFilePath = path + ".epubtxt";
                     File txtFile = new File(textFilePath);
 
                     if (!txtFile.exists()) {
-
                         FileUtils.extractTextFromEpubByBatch( this,file,txtFile);
-
                     }
-//                    Toast.makeText(this, "5"+textFilePath , Toast.LENGTH_SHORT).show();
-
                 }else{
-
                     textFilePath = path;
                 }
-
-//                Toast.makeText(this, "6"+textFilePath , Toast.LENGTH_SHORT).show();
-
-                fullText = readFileToString(new File(textFilePath));
-
+                fullText = readFileToString(new File(textFilePath));  //改首次加载**
             } catch (Exception e) {
                 Toast.makeText(this, "读取失败", Toast.LENGTH_SHORT).show();
                 fullText = "";
             }
-
             currentPage = lastPage;
             sentenceIndex = lastSentence;
         }
 
+
+       public List<Integer> buildPageOffsets(String filePath) {
+//        if(!pageOffsets.isEmpty())pageOffsets.clear();
+
+            int viewWidth = textView.getWidth() - textView.getPaddingLeft() - textView.getPaddingRight();
+            int viewHeight = textView.getHeight() - textView.getPaddingTop() - textView.getPaddingBottom();
+            if (viewWidth <= 0 || viewHeight <= 0) return null;
+            viewHeight = viewHeight - 680;
+            TextPaint paint = textView.getPaint();
+            int start = 0;
+            int textLength = fullText.length();
+            pageOffsets.add(start);
+
+            while (start < textLength) {
+                int low = start + 1;
+                int high = Math.min(textLength, start + 2000);
+                int fitPos = start + 1;
+
+                while (low <= high) {
+                    int mid = (low + high) / 2;
+//                String sub = fullText.substring(start, mid);  //从文件读**
+                    String sub =  readTextSegment(filePath,start, mid);
+                    StaticLayout layout = android.text.StaticLayout.Builder.obtain(sub, 0, sub.length(), paint, viewWidth)
+                            .setLineSpacing(0f, 1.2f).setIncludePad(false).build();
+                    if (layout.getHeight() <= viewHeight) {
+                        fitPos = mid;
+                        low = mid + 1;
+                    } else {
+                        high = mid - 1;
+                    }
+                }
+
+                if (fitPos <= start) break;
+                pageOffsets.add(fitPos);
+                start = fitPos;
+            }
+
+            totalPages = pageOffsets.size() - 1;
+            seekBar.setMax(Math.max(totalPages, 1));
+            return pageOffsets;
+        }
         /** 将文件完整读取为字符串（自动检测编码） */
         private String readFileToString(File file) throws IOException {
 //            Toast.makeText(this, "7"+file.getAbsolutePath(), Toast.LENGTH_SHORT).show();
@@ -219,49 +262,14 @@ import java.util.List;
                 while ((line = reader.readLine()) != null) {
                     sb.append(line).append("\n");
                 }
+//                reader.close();
             }
+
             return sb.toString();
         }
 
 
-     public void buildPageOffsets() {
-        pageOffsets.clear();
 
-        int viewWidth = textView.getWidth() - textView.getPaddingLeft() - textView.getPaddingRight();
-        int viewHeight = textView.getHeight() - textView.getPaddingTop() - textView.getPaddingBottom();
-        if (viewWidth <= 0 || viewHeight <= 0) return;
-        viewHeight = viewHeight - 680;
-        TextPaint paint = textView.getPaint();
-        int start = 0;
-        int textLength = fullText.length();
-        pageOffsets.add(start);
-
-        while (start < textLength) {
-            int low = start + 1;
-            int high = Math.min(textLength, start + 2000);
-            int fitPos = start + 1;
-
-            while (low <= high) {
-                int mid = (low + high) / 2;
-                String sub = fullText.substring(start, mid);
-                StaticLayout layout = android.text.StaticLayout.Builder.obtain(sub, 0, sub.length(), paint, viewWidth)
-                        .setLineSpacing(0f, 1.2f).setIncludePad(false).build();
-                if (layout.getHeight() <= viewHeight) {
-                    fitPos = mid;
-                    low = mid + 1;
-                } else {
-                    high = mid - 1;
-                }
-            }
-
-            if (fitPos <= start) break;
-            pageOffsets.add(fitPos);
-            start = fitPos;
-        }
-
-        totalPages = pageOffsets.size() - 1;
-        seekBar.setMax(Math.max(totalPages, 1));
-    }
 
     private Charset detectEncoding(File file) {
         byte[] buf = new byte[4096];
@@ -286,6 +294,8 @@ import java.util.List;
 
     private void loadPage(int page) {
         Log.d("loadPage", totalPages+"loadPage "+page);
+        if (pageOffsets == null || page < 0 || page >= pageOffsets.size()) return;
+
         if (page < 0 || page >= totalPages) return;
 
 /*      int start = pageOffsets.get(page);
@@ -299,7 +309,9 @@ import java.util.List;
         if (end > fullText.length()) end = fullText.length();
         if (end < start) end = start;
 
-        String pageText = fullText.substring(start, end);
+//        String pageText = fullText.substring(start, end);    //*******
+        String pageText = readTextSegment(filePath,start, end);
+
 //        if (pageText.isEmpty()) loadPage(page+1);
 
         currentSentences = pageText.split("(?<=[.,，?!。！？])");
@@ -396,6 +408,7 @@ import java.util.List;
     }
 
 
+/*
     private List<String> splitByLength(String text, int maxLen) {
         List<String> chunks = new ArrayList<>();
         int index = 0;
@@ -406,6 +419,7 @@ import java.util.List;
         }
         return chunks;
     }
+*/
 
 
     private void onTtsDone() {
@@ -569,4 +583,21 @@ import java.util.List;
         textView.setTypeface(typeface);
     }
 
-}
+        private String readTextSegment(String filePath, int start, int end) {
+            StringBuilder sb = new StringBuilder();
+            File file = new File(filePath);
+            Charset charset = detectEncoding(file);
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), charset))) {
+                int readCount = 0;
+                int c;
+                while ((c = reader.read()) != -1) {
+                    if (readCount >= start && readCount < end) sb.append((char)c);
+                    readCount++;
+                    if (readCount >= end) break;
+                }
+            } catch (IOException e) { e.printStackTrace(); }
+            return sb.toString();
+        }
+
+
+    }

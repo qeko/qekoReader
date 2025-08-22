@@ -57,6 +57,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="2.0x" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:text="朗读速度"
+            android:paddingStart="8dp" />
     </RadioGroup>
 
 
@@ -94,17 +100,9 @@
                 android:id="@+id/radio10min"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="10" />
+                android:text="10分钟停止" />
         </RadioGroup>
-
-        <TextView
-            android:id="@+id/labelExitHint"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:text="分钟后退出"
-            android:paddingStart="8dp" />
-    </LinearLayout>
+       </LinearLayout>
 
 
     <!-- 主题切换 -->

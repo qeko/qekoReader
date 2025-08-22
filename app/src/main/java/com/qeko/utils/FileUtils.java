@@ -43,6 +43,8 @@ import com.qeko.reader.FileTypeStrategy;
 import java.io.File;
 
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 import java.nio.charset.Charset;
@@ -486,4 +488,44 @@ public class FileUtils {
             Log.e(TAG, "extractTextFromEpubByBatch 出错", e);
         }
     }
+
+
+    // 序列化保存分页偏移数组
+
+    public static void savePageOffsets(Context ctx, String filePath, List<Integer> offsets) {
+        if (offsets == null) return;
+        File cacheFile = new File(ctx.getCacheDir(), new File(filePath).getName() + ".pagecache");
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(cacheFile))) {
+            oos.writeObject(offsets);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    // 反序列化读取分页偏移数组
+    @SuppressWarnings("unchecked")
+    public static List<Integer> loadPageOffsets(Context ctx, String filePath) {
+        File cacheFile = new File(ctx.getCacheDir(), new File(filePath).getName() + ".pagecache");
+        if (!cacheFile.exists()) return new ArrayList<>();
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(cacheFile))) {
+            return (List<Integer>) ois.readObject();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    // 获取缓存文件（按PDF路径生成唯一文件名）
+    private static File getPageOffsetCacheFile(Context context, String filePath) {
+        String safeName = filePath.replaceAll("[^a-zA-Z0-9.-]", "_");
+        return new File(context.getCacheDir(), safeName + ".pageOffsets");
+    }
+
+    // 删除缓存（如果需要）
+    public static void deletePageOffsetCache(Context context, String filePath) {
+        File f = getPageOffsetCacheFile(context, filePath);
+        if (f.exists()) f.delete();
+    }
+
 }

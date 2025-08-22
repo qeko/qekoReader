@@ -69,7 +69,7 @@ public class ControlActivity {
 
     private void setupExitTimer() {
         RadioGroup timerGroup = panel.findViewById(R.id.radioExitTimer);
-        TextView exitLabel = panel.findViewById(R.id.labelExitHint); // “分钟后退出”
+//        TextView exitLabel = panel.findViewById(R.id.labelExitHint); // “分钟后退出”
 
         timerGroup.setOnCheckedChangeListener((group, checkedId) -> {
             int minutes = 0;
@@ -84,9 +84,7 @@ public class ControlActivity {
                 exitRunnable = () -> activity.finish();
                 handler.postDelayed(exitRunnable, minutes * 60 * 1000L);
 //                exitLabel.setText(minutes + " 分钟后退出");
-            } else {
-                exitLabel.setText("");
-            }
+            } 
         });
     }
 
