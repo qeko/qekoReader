@@ -16,6 +16,8 @@ public class AppPreferences {
     private static final String PREF_FONT_NAME = "fontName";
     private static final String PREF_SIMPLIFIED = "simplified"; // true简体，false繁体
     private static final String PREF_BRIGHTNESS = "brightness";
+    private static final String PREF_TEXTLEMGTH = "textLength";
+
 
 //    private static final String PREFS_NAME = "reader_prefs";
     private static final String KEY_TOTAL_PAGES = "total_pages";
@@ -34,6 +36,15 @@ public class AppPreferences {
 
     public void setLastFilePath(String path) {
         preferences.edit().putString(PREF_LAST_FILE_PATH, path).apply();
+    }
+
+
+    public int getTextLength() {
+        return preferences.getInt(PREF_TEXTLEMGTH, 0);
+    }
+
+    public void setTextLength(int page) {
+        preferences.edit().putInt(PREF_TEXTLEMGTH, page).apply();
     }
 
     public int getLastPage() {

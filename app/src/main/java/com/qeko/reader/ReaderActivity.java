@@ -1,5 +1,7 @@
 package com.qeko.reader;
 
+import static android.content.ContentValues.TAG;
+
 import android.app.Dialog;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -101,6 +103,7 @@ import java.util.List;
         filePath = getIntent().getStringExtra("filePath");
 
 
+
         new Thread(() -> {
             loadText(filePath);
 
@@ -111,6 +114,7 @@ import java.util.List;
             }
 
             if (!pageOffsets.isEmpty()) {
+//                pageOffsets = buildPageOffsets(filePath);   //测试时用
                 totalPages = Math.max(1, pageOffsets.size() - 1);
                 runOnUiThread(() -> {
                     setupSeekBar();
@@ -210,7 +214,7 @@ import java.util.List;
             sentenceIndex = lastSentence;
         }
 
-
+private     int textLength;
        public List<Integer> buildPageOffsets(String filePath) {
 //        if(!pageOffsets.isEmpty())pageOffsets.clear();
 
@@ -220,7 +224,8 @@ import java.util.List;
             viewHeight = viewHeight - 680;
             TextPaint paint = textView.getPaint();
             int start = 0;
-            int textLength = fullText.length();
+            textLength = fullText.length();
+            appPreferences.setTextLength(textLength);
             pageOffsets.add(start);
 
             while (start < textLength) {
@@ -292,27 +297,85 @@ import java.util.List;
     }
 
 
+        private void loadPage(int page) {
+            Log.d("loadPage", totalPages + " loadPage " + page);
+            if (pageOffsets == null || page < 0 || page >= pageOffsets.size()) return;
+            if (page < 0 || page >= totalPages) return;
+
+            // 这里不要再用 fullText.length()，改用持久化的 textLength
+            textLength = appPreferences.getTextLength();
+            Log.d("TAG", "textLength = " + textLength);
+
+            int start = pageOffsets.get(page);
+            int end = (page + 1 < pageOffsets.size()) ? pageOffsets.get(page + 1) : textLength;
+
+            Log.d("TAG", start + " loadPage:pageText " + end);
+
+            // 防御：确保 start 和 end 合法
+            if (start < 0) start = 0;
+            if (end > textLength) end = textLength;
+            if (end < start) end = start;
+
+            // 每次只加载一段内容，而不是全文
+            String pageText = readTextSegment(filePath, start, end);
+
+            Log.d(TAG, "loadPage pageText: "+pageText);
+
+//            textView.setText(pageText);
+
+            currentSentences = pageText.split("(?<=[.,，?!。！？])");
+
+            if (isInitialLoad && page == currentPage) {
+                int lastSentence = PreferenceManager.getDefaultSharedPreferences(this).getInt("lastSentence", 0);
+                sentenceIndex = Math.min(lastSentence, currentSentences.length - 1);
+                isInitialLoad = false;  // 🔴 防止后续翻页继续恢复
+            } else {
+                sentenceIndex = 0;
+            }
+
+            highlightSentence(-1);
+            currentPage = page;
+            seekBar.setProgress(page);
+            updatePageInfo();
+
+            new Thread(() -> {
+                runOnUiThread(() -> {
+                    if (ttsManager == null) {
+                        ttsManager = new TextToSpeechManager(this, this::onTtsDone);
+                        ttsManager.setSpeed(speechRate);
+                        // 自动点击
+                        new Handler().postDelayed(() -> {
+                            // 模拟点击事件
+                            if (0 == TextToSpeech.SUCCESS) {
+                                toggleSpeaking();
+                            }
+                        }, 2000);
+                    }
+                });
+            }).start();
+        }
+
+
+/*
     private void loadPage(int page) {
         Log.d("loadPage", totalPages+"loadPage "+page);
         if (pageOffsets == null || page < 0 || page >= pageOffsets.size()) return;
 
         if (page < 0 || page >= totalPages) return;
 
-/*      int start = pageOffsets.get(page);
-        int end = pageOffsets.get(page + 1);*/
+        textLength = fullText.length();
+        Log.d("TAG","fullText.length()"+fullText);
         int start = pageOffsets.get(page);
-        int end = (page + 1 < pageOffsets.size()) ? pageOffsets.get(page + 1) : fullText.length();
+        int end = (page + 1 < pageOffsets.size()) ? pageOffsets.get(page + 1) : textLength;
 
         Log.d("TAG", start+"loadPage:pageText "+end);
         // 防御：确保 start 和 end 合法
         if (start < 0) start = 0;
-        if (end > fullText.length()) end = fullText.length();
+        if (end > textLength) end = textLength;
         if (end < start) end = start;
 
-//        String pageText = fullText.substring(start, end);    //*******
-        String pageText = readTextSegment(filePath,start, end);
 
-//        if (pageText.isEmpty()) loadPage(page+1);
+        String pageText = readTextSegment(filePath,start, end);
 
         currentSentences = pageText.split("(?<=[.,，?!。！？])");
 
@@ -354,6 +417,7 @@ import java.util.List;
 
 
     }
+*/
 
 
     private void toggleSpeaking() {
