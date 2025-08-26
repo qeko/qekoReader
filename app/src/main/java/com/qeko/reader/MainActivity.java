@@ -189,28 +189,18 @@ public class MainActivity extends Activity {
 
 
 
-        ImageView  icon = findViewById(R.id.icon);
+/*        ImageView  icon = findViewById(R.id.icon);
             if ("IMAGE_DIRS".equals(cacheKey)) {
                 ViewGroup.LayoutParams params = icon.getLayoutParams();
                 params.width = params.width * 13;   // 放大3倍
                 params.height = params.height * 13; // 放大3倍
                 icon.setLayoutParams(params);
+        }*/
 
-//                icon.setScaleX(30f);
-//                icon.setScaleY(30f);
-//            ViewGroup.LayoutParams params = icon.getLayoutParams();
-//            params.width = params.width * 3;   // 放大3倍
-//            params.height = params.height * 3; // 放大3倍
-//            icon.setLayoutParams(params);
-        }
+
         showFiles(files);
 
-/*        View musicPlayerPanel = findViewById(R.id.musicPlayerPanel);
-        if ("MUSIC_DIRS".equals(cacheKey)) {
-            musicPlayerPanel.setVisibility(View.VISIBLE);
-        } else {
-            musicPlayerPanel.setVisibility(View.GONE);
-        }*/
+
     }
 
 /*

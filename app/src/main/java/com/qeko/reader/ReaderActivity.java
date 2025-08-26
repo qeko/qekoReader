@@ -8,6 +8,7 @@ import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.speech.tts.TextToSpeech;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
@@ -44,6 +45,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 //import com.ibm.icu.text.Transliterator;
 
     public class ReaderActivity extends AppCompatActivity {
@@ -75,6 +78,7 @@ import java.util.List;
     private  int lastSentence  ;
     private float lineSpacingMultiplier = 1.5f; // 示例值，也可以存储为用户偏好
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -102,8 +106,6 @@ import java.util.List;
         restoreUserSettings();
         filePath = getIntent().getStringExtra("filePath");
 
-
-
         new Thread(() -> {
             loadText(filePath);
 
@@ -119,7 +121,7 @@ import java.util.List;
                 runOnUiThread(() -> {
                     setupSeekBar();
 //                    dismissLoadingDialog();
-                    loadPage(currentPage);
+                    loadPage(pageOffsets,currentPage);
                 });
             } else {
                 // 无缓存 -> 重新分页
@@ -134,18 +136,17 @@ import java.util.List;
                 runOnUiThread(() -> {
                     setupSeekBar();
 //                    dismissLoadingDialog();
-                    loadPage(currentPage);
+//                    loadPage(currentPage);
+
+                    loadPage(pageOffsets2 != null && !pageOffsets2.isEmpty() ? pageOffsets2 : pageOffsets, currentPage);
                 });
             }
         }).start();
-
 
         setupSeekBar();
         setupTouchControl();
         btnTTS.setOnClickListener(v -> toggleSpeaking());
     }
-
-
 
     private void restoreUserSettings() {
         speechRate  = appPreferences.getSpeechRate();
@@ -181,7 +182,6 @@ import java.util.List;
         });
     }
 
-
         private void loadText(String path) {
             String textFilePath="";
             try {
@@ -189,19 +189,19 @@ import java.util.List;
                 if (path.toLowerCase().endsWith(".pdf")) {
                     // 处理 PDF -> .pdftxt
                     textFilePath = path + ".pdftxt";
-                    File txtFile = new File(textFilePath);
+   /*                 File txtFile = new File(textFilePath);
                     if (!txtFile.exists()) {
 
                         FileUtils.extractTextFromPdf(file, this,txtFile);
-                    }
+                    }*/
                 }else if (path.toLowerCase().endsWith(".epub")) {
 
                     textFilePath = path + ".epubtxt";
-                    File txtFile = new File(textFilePath);
+/*                    File txtFile = new File(textFilePath);
 
                     if (!txtFile.exists()) {
                         FileUtils.extractTextFromEpubByBatch( this,file,txtFile);
-                    }
+                    }*/
                 }else{
                     textFilePath = path;
                 }
@@ -249,6 +249,12 @@ private     int textLength;
 
                 if (fitPos <= start) break;
                 pageOffsets.add(fitPos);
+
+
+                // 如果页数不超过30~100，则克隆到临时分页
+                if (pageOffsets.size() <= 100 && pageOffsets.size() >= 30) { pageOffsets2 = new ArrayList<>(pageOffsets); }
+
+
                 start = fitPos;
             }
 
@@ -297,7 +303,7 @@ private     int textLength;
     }
 
 
-        private void loadPage(int page) {
+        private void loadPage(List<Integer> pageOffsets,int page) {
             Log.d("loadPage", totalPages + " loadPage " + page);
             if (pageOffsets == null || page < 0 || page >= pageOffsets.size()) return;
             if (page < 0 || page >= totalPages) return;
@@ -448,7 +454,8 @@ private     int textLength;
                 if (currentPage < totalPages - 1) {
                     currentPage++;
                     appPreferences.setCurrentPage(currentPage);
-                    loadPage(currentPage);
+//                    loadPage(currentPage);
+                    loadPage(pageOffsets2 != null && !pageOffsets2.isEmpty() ? pageOffsets2 : pageOffsets, currentPage);
                     speakCurrentPage();
                 } else {
                     // 读完所有页
@@ -522,7 +529,9 @@ private     int textLength;
                         btnTTS.setText("▶️");
                     }
                     currentPage = p;
-                    loadPage(p);
+//                    loadPage(p);
+
+                    loadPage(pageOffsets2 != null && !pageOffsets2.isEmpty() ? pageOffsets2 : pageOffsets, p);
                 }
             }
             public void onStartTrackingTouch(SeekBar seekBar) {}
@@ -553,12 +562,14 @@ private     int textLength;
                 if (x < width / 3f) {
                     if (currentPage > 0) {
                         currentPage--;
-                        loadPage(currentPage);
+//                        loadPage(currentPage);
+                        loadPage(pageOffsets2 != null && !pageOffsets2.isEmpty() ? pageOffsets2 : pageOffsets, currentPage);
                     }
                 } else if (x > width * 2 / 3f) {
                     if (currentPage < totalPages - 1) {
                         currentPage++;
-                        loadPage(currentPage);
+//                        loadPage(currentPage);
+                        loadPage(pageOffsets2 != null && !pageOffsets2.isEmpty() ? pageOffsets2 : pageOffsets, currentPage);
                     }
                 } else {
                     controlActivity.toggleVisibility();
