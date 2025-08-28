@@ -1,5 +1,7 @@
 package com.qeko.reader;
 
+import static android.content.ContentValues.TAG;
+
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
@@ -11,6 +13,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -111,7 +114,6 @@ public class MainActivity extends Activity {
 
         Button btnScan = findViewById(R.id.btnScan);
         btnScan.setOnClickListener(v -> scanDocuments());
-
 
 
     }
@@ -429,12 +431,20 @@ public class MainActivity extends Activity {
 //        Toast.makeText(this, "分类目录扫描完成", Toast.LENGTH_SHORT).show();
     }
 
-
+private        ArrayList<File> pdfList;
     private void scanDirectoryRecursive(File dir, Map<String, List<String>> categoryDirs) {
         if (dir == null || !dir.isDirectory() || dir.isHidden()) return;
 
         // 🧠 判断是否包含目标类型文件
         if (FileUtils.countMatchingFiles(dir, new BookFileStrategy()) > 0) {
+             pdfList = (ArrayList<File>) scanFiles(dir, new String[]{".pdf",".epub"});
+
+            if(pdfList !=null && pdfList.size() > 0) {
+                FileUtils.processPdfListInBackground(pdfList, MainActivity.this);
+            }
+
+//            pdfList =  (ArrayList<File>)scanFiles(dir, new String[]{".epub"});
+
             categoryDirs.get("BOOK_DIRS").add(dir.getAbsolutePath());
         }
         if (FileUtils.countMatchingFiles(dir, new ImageFileStrategy()) > 0) {
@@ -492,40 +502,87 @@ public class MainActivity extends Activity {
                 Toast.makeText(this, "无法打开该类型的文件: " + name, Toast.LENGTH_SHORT).show();
             }
         }
-/*
 
-    private void setupExitTimer() {  //change后执行
-        Spinner spinner = findViewById(R.id.spinner);
-        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (exitRunnable != null) {
-                    handler.removeCallbacks(exitRunnable);
-                }
 
-                int delayMillis = 0;
-                switch (position) {
-                    case 1: delayMillis = 5 * 60 * 1000; break;
-                    case 2: delayMillis = 10 * 60 * 1000; break;
-                    case 3: delayMillis = 30 * 60 * 1000; break;
-                    case 4: delayMillis = 60 * 60 * 1000; break;
-                    default: delayMillis = 0; break;
-                }
-
-                if (delayMillis > 0) {
-                    exitRunnable = () -> {
-                        Toast.makeText(MainActivity.this, "定时退出", Toast.LENGTH_SHORT).show();
-                        finish();
-                    };
-                    handler.postDelayed(exitRunnable, delayMillis);
+    public List<File> scanFiles(File dir, String[] extensions) {
+        List<File> result = new ArrayList<>();
+        if (dir == null || !dir.exists()) {
+            return result;
+        }
+        if (dir.isFile()) {
+            String nameLower = dir.getName().toLowerCase(Locale.ROOT);
+            for (String ext : extensions) {
+                if (nameLower.endsWith(ext.toLowerCase(Locale.ROOT))) {
+                    result.add(dir);
+                    break; // 匹配到一个扩展名即可
                 }
             }
+            return result;
+        }
 
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {}
-        });
+        File[] files = dir.listFiles();
+        if (files == null) {
+            return result;
+        }
+
+        for (File file : files) {
+            if (file.isDirectory()) {
+                result.addAll(scanFiles(file, extensions)); // 递归
+            } else {
+                String nameLower = file.getName().toLowerCase(Locale.ROOT);
+                for (String ext : extensions) {
+                    if (nameLower.endsWith(ext.toLowerCase(Locale.ROOT))) {
+                        result.add(file);
+                        break;
+                    }
+                }
+            }
+        }
+        return result;
     }
-*/
+
+    public static ArrayList<File> scanPdfFiles(File dir, String extension) {
+        ArrayList<File> resultFiles = new ArrayList<>();
+        if (dir == null || !dir.exists() || !dir.isDirectory()) {
+            return resultFiles;
+        }
+        scanRecursive(dir, resultFiles, extension.toLowerCase());
+        return resultFiles;
+    }
+
+    private static void scanRecursive(File folder, ArrayList<File> resultFiles, String extension) {
+        File[] files = folder.listFiles();
+        if (files == null) return;
+
+        for (File f : files) {
+            if (f.isDirectory()) {
+                scanRecursive(f, resultFiles, extension);  // 递归子目录
+            } else if (f.getName().toLowerCase().endsWith(extension)) {
+                resultFiles.add(f);
+            }
+        }
+    }
+/*    public static ArrayList<File> scanPdfFiles(File dir) {
+        ArrayList<File> pdfFiles = new ArrayList<>();
+        if (dir == null || !dir.exists() || !dir.isDirectory()) {
+            return pdfFiles;
+        }
+        scanRecursive(dir, pdfFiles);
+        return pdfFiles;
+    }
+
+    private static void scanRecursive(File folder, ArrayList<File> pdfFiles) {
+        File[] files = folder.listFiles();
+        if (files == null) return;
+
+        for (File f : files) {
+            if (f.isDirectory()) {
+                scanRecursive(f, pdfFiles);  // 递归子目录
+            } else if (f.getName().toLowerCase().endsWith(".pdf")) {
+                pdfFiles.add(f);
+            }
+        }
+    }*/
 
     @Override
     protected void onDestroy() {
@@ -535,73 +592,3 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 }
-/*
-    private void loadCachedFolders() {
-        File root = Environment.getExternalStorageDirectory();
-        List<File> cachedFiles = FileUtils.scanAll(root);
-        folderMap.clear();
-
-        for (File file : cachedFiles) {
-            File parent = file.getParentFile();
-            folderMap.computeIfAbsent(parent, k -> new ArrayList<>()).add(file);
-        }
-
-        displayItems.clear();
-        for (Map.Entry<File, List<File>> entry : folderMap.entrySet()) {
-            File folder = entry.getKey();
-            List<File> files = entry.getValue();
-
-            FileItem folderItem = new FileItem(folder, true);
-            folderItem.setDocumentCount(files.size());
-            folderItem.setExpanded(true);
-
-            List<FileItem> childItems = new ArrayList<>();
-            FileItem lastReadItem = null;
-
-            for (File f : files) {
-                FileItem item = new FileItem(f, false);
-                if (f.getAbsolutePath().equals(lastFilePath)) {
-                    item.setLastRead(true);
-                    lastReadItem = item;
-                }
-                childItems.add(item);
-            }
-
-            // 如果找到上次阅读文件，放它到第一位
-            if (lastReadItem != null) {
-                childItems.remove(lastReadItem);
-                childItems.add(0, lastReadItem);
-            }
-
-            folderItem.setChildren(childItems);
-            displayItems.add(folderItem);
-        }
-
-        // 如果需要，把包含上次阅读文件的目录也移到最前面（可选）
-        for (int i = 0; i < displayItems.size(); i++) {
-            FileItem folderItem = displayItems.get(i);
-            List<FileItem> children = folderItem.getChildren();
-            if (children != null && !children.isEmpty() && children.get(0).isLastRead()) {
-                displayItems.remove(i);
-                displayItems.add(0, folderItem);
-                break;
-            }
-        }
-    }
-*/
-
-
-
-
-    /*
-
-    private void openFile(File file) {
-        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-                .edit().putString(LAST_FILE_PATH, file.getAbsolutePath()).apply();
-
-        Intent intent = new Intent(this, ReaderActivity.class);
-        intent.putExtra("filePath", file.getAbsolutePath());
-        startActivity(intent);
-    }
-*/
-

@@ -18,10 +18,16 @@ public class FileItem {
     private int charsPerPage;
     private boolean pinned;
     private boolean isImage; // 是否图片文件
+    private boolean clickable;
+
     public FileItem(File file, boolean isFolder) {
         this.file = file;
         this.isFolder = isFolder;
     }
+
+    public boolean isClickable() { return clickable; }
+    public void setClickable(boolean clickable) { this.clickable = clickable; }
+
 
     public boolean isImage() { return isImage; }
     public void setImage(boolean image) { isImage = image; }

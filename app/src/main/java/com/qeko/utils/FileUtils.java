@@ -37,7 +37,8 @@ import com.itextpdf.text.pdf.parser.LocationTextExtractionStrategy;
 import com.itextpdf.text.pdf.parser.PdfTextExtractor;
 
 import com.qeko.reader.FileTypeStrategy;
-
+import com.qeko.reader.MainActivity;
+import com.qeko.reader.PageOffset;
 
 
 import java.io.File;
@@ -54,6 +55,8 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import android.util.Log;
 
@@ -65,6 +68,7 @@ import nl.siegmann.epublib.domain.SpineReference;
 import nl.siegmann.epublib.epub.EpubReader;
 
 public class FileUtils {
+    private static final String PAGE_OFFSET_EXT = ".pageoffsets";
     // 递归扫描 .txt 文件
     public static List<File> scanAll(File dir, FileTypeStrategy strategy) {
         List<File> result = new ArrayList<>();
@@ -97,6 +101,154 @@ public class FileUtils {
     }
 
 
+    private static   ExecutorService executorService ;
+
+    public static  void processPdfListInBackground(final ArrayList<File> fileList, final Context context) {
+        new Thread(() -> {
+            for (File file : fileList) {
+                try {
+                    String nameLower = file.getName().toLowerCase();
+                    if (nameLower.endsWith(".pdf")) {
+                        // 生成临时文件路径
+                        String pdfPath = file.getAbsolutePath();
+                        String tempPath = pdfPath + ".pdftemp";
+                        String txtPath = pdfPath + ".pdftxt";
+
+                        File tempFile = new File(tempPath);
+                        File txtFile = new File(txtPath);
+
+                        // 如果临时文件存在则跳过，避免重复处理
+                        if (!txtFile.exists()) {
+                            // 删除旧的临时文件（保证重新生成）
+                            if (tempFile.exists()) tempFile.delete();
+//                            extractTextFromPdf(file, context);
+                            extractTextFromPdf(file, context, "fonts/SimsunExtG.ttf");
+                        }
+                    } else if (nameLower.endsWith(".epub")) {
+                        // 生成临时文件路径
+                        String epubPath = file.getAbsolutePath();
+                        String tempPath = epubPath + ".epubtemp";
+                        String txtPath = epubPath + ".epubtxt";
+
+                        File tempFile = new File(tempPath);
+                        File txtFile = new File(txtPath);
+
+                        // 如果临时文件存在则跳过，避免重复处理
+                        if (!txtFile.exists()) {
+                            // 删除旧的临时文件（保证重新生成）
+                            if (tempFile.exists()) tempFile.delete();
+//                            extractTextFromEpubByBatch(file, context);
+                            extractTextFromEpubByBatch( context,file,txtFile);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+
+
+
+    }
+
+/*
+    public static void processPdfListInBackground(ArrayList<File> pdfFiles, Context context) {
+        if (executorService == null || executorService.isShutdown()) {
+            executorService = Executors.newFixedThreadPool(2);
+        }
+
+        executorService.execute(() -> {
+            for (File pdf : pdfFiles) {
+                try {
+                    // 提取文本
+                    String text = FileUtils.extractTextFromPdf(pdf, context, "fonts/SimsunExtG.ttf");
+
+                    if (text != null && !text.trim().isEmpty()) {
+                        // 写入 .pdftemp 文件
+                        File tempFile = new File(pdf.getParent(), pdf.getName() + ".pdftemp");
+                        try (FileWriter writer = new FileWriter(tempFile)) {
+                            writer.write(text);
+                        }
+
+                        // 重命名为 .pdftxt（先删除已有的 .pdftxt）
+                        File txtFile = new File(pdf.getParent(), pdf.getName() + ".pdftxt");
+                        if (txtFile.exists()) {
+                            txtFile.delete();
+                        }
+                        tempFile.renameTo(txtFile);
+                    } else {
+                        Log.e("PDF", "提取文本失败，下次会重新生成: " + pdf.getName());
+                    }
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+*/
+
+    public static String extractTextFromPdf(File file, Context context, String fontAssetPath) {
+        StringBuilder text = new StringBuilder();
+        PdfReader reader = null;
+        try {
+            File fontFile = copyFontFromAssets(context, fontAssetPath); // 可选
+            reader = new PdfReader(file.getAbsolutePath());
+            int numPages = reader.getNumberOfPages();
+
+            for (int i = 1; i <= numPages; i++) {
+                String pageText = PdfTextExtractor.getTextFromPage(reader, i);
+                text.append(pageText).append("\n");
+            }
+
+            Log.d("PDF", file.getAbsolutePath()+"PDF 文本提取完成，共 " + numPages + " 页");
+        } catch (Exception e) {
+            Log.e("PDF", "extractTextFromPdf 出错", e);
+        } finally {
+            if (reader != null) {
+                reader.close();
+            }
+        }
+        return text.toString();
+    }
+    /*
+    public static void extractTextFromPdf(File pdfFile, Context context) {
+        String pdfPath = pdfFile.getAbsolutePath();
+        String tempPath = pdfPath + ".pdftemp";
+        String txtPath = pdfPath + ".pdftxt";
+
+        File tempFile = new File(tempPath);
+        File txtFile = new File(txtPath);
+
+        // 如果txt已经存在，直接跳过
+        if (txtFile.exists()) {
+            return;
+        }
+
+        // 每次重新生成 pdftemp 覆盖旧的
+        if (tempFile.exists()) {
+            tempFile.delete();
+        }
+
+        boolean success = false;
+        try {
+            // TODO: 实现 PDF → 文本的提取逻辑
+            // 示例：假设 extractPdfTextToFile() 会把解析结果写入 tempFile
+//            success = extractPdfTextToFile(pdfFile, tempFile);
+            extractTextFromPdf(pdfFile, context, "fonts/SimsunExtG.ttf");
+        } catch (Exception e) {
+            e.printStackTrace();
+            success = false;
+        }
+
+        if (success && tempFile.exists()) {
+            // 重命名为 .pdftxt
+            if (txtFile.exists()) txtFile.delete();
+            tempFile.renameTo(txtFile);
+        }
+        // 如果失败，下次重新生成（保留/覆盖 .pdftemp 文件）
+    }
+*/
     private static final String PREFS_NAME = "scan_cache";
 
 
@@ -266,53 +418,31 @@ public class FileUtils {
 
         return result;
     }
- /*
-    public static String extractTextFromPdf(File file, Context context, String fontAssetPath) {
-             StringBuilder text = new StringBuilder();
 
-        PdfReader reader = null;
-        try {
-            // 确保字体文件从 assets 拷贝到临时路径（即使 iText 不直接用它，也方便后续扩展）
 
-            File fontFile = copyFontFromAssets(context, fontAssetPath);
 
-            // 打开 PDF
-            reader = new PdfReader(file.getAbsolutePath());
-
-            int numPages = reader.getNumberOfPages();
-            numPages = 2;
-            for (int i = 1; i <= numPages; i++) {
-                String pageText = PdfTextExtractor.getTextFromPage(reader, i);
-//                String rawText = PdfTextExtractor.getTextFromPage(reader, i, new LocationTextExtractionStrategy());
-
-//                text.append(pageText).append("\n");
-
-                // 强制转为 UTF-8 避免乱码
-//                String utf8Text = new String(rawText.getBytes("ISO-8859-1"), "UTF-8");
-
-                text.append(pageText).append("\n");
-
-            }
-
-            Log.d(TAG, "PDF 文本提取完成，共 " + numPages + " 页");
-        } catch (Exception e) {
-            Log.e(TAG, "extractTextFromPdf 出错", e);
-        } finally {
-            if (reader != null) {
-                reader.close();
-            }
+/*    private static boolean extractPdfTextToFile(File pdfFile, File outFile) {
+        // 示例：这里实现 PDF 文本解析
+        try (FileWriter writer = new FileWriter(outFile)) {
+            // 仅测试：写入固定字符串（你可以换成真实解析）
+            writer.write("Extracted text from: " + pdfFile.getName());
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        return text.toString();
+        return false;
     }*/
+
+
 
 
     /**
      * 从PDF提取文字并按100页批次追加写入 .pdftxt 文件
-     * @param pdfFile PDF文件
-     * @param context 上下文
+
      * @return 生成的 .pdftxt 文件路径
      */
-    public static void extractTextFromPdf(File pdfFile, Context context, File outputTxtFile) {
+/*
+    public static boolean extractTextFromPdf(File pdfFile, Context context, File outputTxtFile) {
         String pdfPath = pdfFile.getAbsolutePath();
 //        String outputPath = pdfPath + ".pdftxt";
 //        File outFile = new File(outputPath);
@@ -358,7 +488,9 @@ public class FileUtils {
                 try { fos.close(); } catch (IOException ignored) {}
             }
         }
+        return  true;
     }
+*/
 
     private static Charset detectEncoding(File file) {
         byte[] buf = new byte[4096];
@@ -527,5 +659,32 @@ public class FileUtils {
         File f = getPageOffsetCacheFile(context, filePath);
         if (f.exists()) f.delete();
     }
+/*
+    // 从磁盘加载已序列化的 PageOffsets
+    public static List<PageOffset> loadPageOffsets(Context context, String filePath) {
+        try {
+            File f = new File(context.getFilesDir(), new File(filePath).getName() + PAGE_OFFSET_EXT);
+            if (!f.exists()) return null;
+            ObjectInputStream ois = new ObjectInputStream(new FileInputStream(f));
+            List<PageOffset> list = (List<PageOffset>) ois.readObject();
+            ois.close();
+            return list;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    // 保存 PageOffsets 到磁盘
+    public static void savePageOffsets(Context context, String filePath, List<PageOffset> list) {
+        try {
+            File f = new File(context.getFilesDir(), new File(filePath).getName() + PAGE_OFFSET_EXT);
+            ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(f));
+            oos.writeObject(list);
+            oos.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }*/
 
 }
