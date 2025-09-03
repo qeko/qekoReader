@@ -17,6 +17,9 @@ public class AppPreferences {
     private static final String PREF_SIMPLIFIED = "simplified"; // true简体，false繁体
     private static final String PREF_BRIGHTNESS = "brightness";
     private static final String PREF_TEXTLEMGTH = "textLength";
+    private static final String PREF_PAGECHARCOUNT = "pageCharCount";
+
+
 
 
 //    private static final String PREFS_NAME = "reader_prefs";
@@ -38,6 +41,14 @@ public class AppPreferences {
         preferences.edit().putString(PREF_LAST_FILE_PATH, path).apply();
     }
 
+
+    public int getPageCharCount() {
+        return preferences.getInt(PREF_PAGECHARCOUNT, 0);
+    }
+
+    public void setPageCharCount(int pagecharcount) {
+        preferences.edit().putInt(PREF_PAGECHARCOUNT, pagecharcount).apply();
+    }
 
     public int getTextLength() {
         return preferences.getInt(PREF_TEXTLEMGTH, 0);
