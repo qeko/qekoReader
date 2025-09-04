@@ -621,25 +621,17 @@ public class FileUtils {
         }
     }
 
-
     // 序列化保存分页偏移数组
-
     public static void savePageOffsets(Context ctx, String filePath, List<Integer> offsets) {
-        Log.d(TAG, "savePageOffsets: 11");
         if (offsets == null) return;
-        Log.d(TAG, "savePageOffsets: 22");
-        File cacheFile = new File(ctx.getCacheDir(), new File(filePath).getName() + ".pagecache");
-        Log.d(TAG, "savePageOffsets: 33");
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(cacheFile))) {
-            Log.d(TAG, "savePageOffsets: 44");
-            oos.writeObject(offsets);
-            Log.d(TAG, "savePageOffsets: 55");
-        } catch (Exception e) {
-            e.printStackTrace();
+            File cacheFile = new File(ctx.getCacheDir(), new File(filePath).getName() + ".pagecache");
+            try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(cacheFile))) {
+                oos.writeObject(offsets);
+            } catch (Exception e) {
+        e.printStackTrace();
         }
         Log.d(TAG, "savePageOffsets: OK");
     }
-
 
     // 反序列化读取分页偏移数组
     @SuppressWarnings("unchecked")

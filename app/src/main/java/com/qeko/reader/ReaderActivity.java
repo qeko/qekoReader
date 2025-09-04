@@ -66,7 +66,7 @@ public class ReaderActivity extends AppCompatActivity {
 
 //    private String fullText = "";
     private List<Integer> pageOffsets = new ArrayList<>();
-//    private List<Integer> pageOffsetsTemp = new ArrayList<>();
+    private List<Integer> pageOffsetsTemp = new ArrayList<>();
     public int currentPage = 0, totalPages = 0;
     private String[] currentSentences;
     private int sentenceIndex = 0;
@@ -82,7 +82,7 @@ public class ReaderActivity extends AppCompatActivity {
     private int lastPage;
     private int lastSentence;
     private float lineSpacingMultiplier = 1.5f; // 示例值，也可以存储为用户偏好
-
+    private boolean runPageOffsets = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -107,17 +107,12 @@ public class ReaderActivity extends AppCompatActivity {
         controlActivity = new ControlActivity(findViewById(R.id.controlPanel), this);
         textView.setTextSize(fontSize);
 //
-        textView.setLineSpacing(5, lineSpacingMultiplier);
+        textView.setLineSpacing(1.9f, lineSpacingMultiplier);
         restoreUserSettings();
         filePath = getIntent().getStringExtra("filePath");
 
-
         loadText(filePath);
-
-
         InitialLoad();
-
-
         setupSeekBar();
         setupTouchControl();
         btnTTS.setOnClickListener(v -> toggleSpeaking());
@@ -125,68 +120,63 @@ public class ReaderActivity extends AppCompatActivity {
 
     private void InitialLoad(){
         // 优先加载缓存
+        pageOffsetsTemp = FileUtils.loadPageOffsets(this, filePath+"temp");
         pageOffsets = FileUtils.loadPageOffsets(this, filePath);
 
+        if (pageOffsetsTemp == null) {
+            pageOffsetsTemp = new ArrayList<>();
+        }
         if (pageOffsets == null) {
             pageOffsets = new ArrayList<>();
         }
-           if (!pageOffsets.isEmpty() && pageOffsets.size() > 0) {
+
+       if (!pageOffsets.isEmpty() && pageOffsets.size() > 0) {
+                    runPageOffsets = true;
                     Log.d(TAG, "onCreate: 有缓存 "+ pageOffsets.size());
-            //               estimatePageCharCount(); //测试时用
-            //        pageOffsets = buildPageOffsets(filePath);   //测试时用
+                 //        pageOffsets = buildPageOffsets(filePath);   //测试时用
                     totalPages = Math.max(1, pageOffsets.size() - 1);
             //              dismissLoadingDialog();
+                    Log.d(TAG, "InitialLoad: loadPage 1");
                         loadPage(pageOffsets,currentPage);
         } else {
+               runPageOffsets = false;
                 Log.d(TAG, "onCreate: 无缓存 ");
+               pageOffsetsTemp.clear();      //清空pageOffsetsTemp
+//               pageOffsetsTemp.add(0);  //待确认
         // 无缓存 -> 重新分页
-
-//              pageOffsets = buildPageOffsets(filePath);
-//              textView.setText(pageOffsets.get(currentPage)); // 立即显示第一页
-//              textView.setText(pageOffsets.get(0)); // 立即显示第一页
-
-               textView.post(() -> {
-//                   pageOffsets = FileUtils.loadPageOffsets(this, filePath);
-//                   if (pageOffsets == null || pageOffsets.isEmpty()) {
-                       // 首次分页 → 立即分页并显示第一页
-                       new Thread(() -> {
-                           buildPageOffsetsWithCache(filePath,true);
-//                           runOnUiThread(() -> {
-//                                   loadPage(pageOffsets, 0); // 立即显示临时分页第一页
-//                           });
+                Log.w(TAG, pageOffsetsTemp.isEmpty()+" buildPageOffsetsWithCache "+ pageOffsetsTemp.size());
+               if (pageOffsetsTemp.isEmpty() && pageOffsetsTemp.size()== 0) {  //双无
+                   Log.d(TAG, "pageOffsetsTemp无  ");
+                   textView.post(() -> {
+                        new Thread(() -> {
+                           Log.w(TAG, "buildPageOffsetsWithCache true");
+                           pageOffsetsTemp = buildPageOffsetsWithCache(filePath, true);
+                           runOnUiThread(() -> {
+                               Log.d(TAG, "InitialLoad: loadPage 2");
+                                   loadPage(pageOffsetsTemp, 0); // 立即显示临时分页第一页
+                           });
                        }).start();
-
-
-//                   new Thread(() -> {
-//                       buildPageOffsetsWithCache(filePath,false);
-//                       runOnUiThread(() -> {
-//                               loadPage(pageOffsets, 0); // 没有临时分页就显示正式分页第一页
-//                        });
-//                   }).start();
-
-//                   } else {
-//                       // 直接使用缓存分页
-//                       loadPage(pageOffsets, currentPage);
-//                   }
-               });
-
-
+                   });
+               } /*else{
+ //               if (!pageOffsetsTemp.isEmpty() && pageOffsetsTemp.size()> 0) {  //双无
+                   textView.post(() -> {
+                        // 首次分页 → 立即分页并显示第一页
+                       new Thread(() -> {
+                           Log.w(TAG, "buildPageOffsetsWithCache false");
+                           pageOffsets = buildPageOffsetsWithCache(filePath, false);
+                        }).start();
+                   });
+//               }
+               }*/
                totalPages = Math.max(1, pageOffsets.size() - 1);
 //                    dismissLoadingDialog();
 //                    loadPage(currentPage);
 //        loadPage(pageOffsetsTemp != null && !pageOffsetsTemp.isEmpty() ? pageOffsetsTemp : pageOffsets, currentPage);
+               Log.d(TAG, "InitialLoad: loadPage 3");
+           runPageOffsets = true;
                loadPage( pageOffsets, currentPage);
-
-
     }
 
-        if (pageOffsets.isEmpty() && pageOffsets.size() == 0) {
-            textView.post(() -> {
-
-                        buildPageOffsetsWithCache(filePath, false);
-
-            });
-        }
 }
 
 
@@ -195,7 +185,9 @@ public class ReaderActivity extends AppCompatActivity {
 
 
     public List<Integer> buildPageOffsetsWithCache(String filePath,boolean isNewPageOffers) {
-        Log.w(TAG, "buildPageOffsetsWithCache");
+        Log.w(TAG, "buildPageOffsetsWithCache"+isNewPageOffers);
+
+          List<Integer> thisPageOffsets = new ArrayList<>();
         // 先读取缓存
         textLength = appPreferences.getTextLength();
         pageCharCount = appPreferences.getPageCharCount();
@@ -233,11 +225,11 @@ public class ReaderActivity extends AppCompatActivity {
         }
 
         // 开始分页
-        pageOffsets.clear();
-        pageOffsets.add(0);
+        thisPageOffsets.clear();
+        thisPageOffsets.add(0);
         TextPaint paint = textView.getPaint();
         int viewWidth = textView.getWidth() - textView.getPaddingLeft() - textView.getPaddingRight();
-        int viewHeight = textView.getHeight() - textView.getPaddingTop() - textView.getPaddingBottom() - 680;
+        int viewHeight = textView.getHeight() - textView.getPaddingTop() - textView.getPaddingBottom() - 720;
 
         int start = 0;
         while (start < textLength) {
@@ -259,64 +251,30 @@ public class ReaderActivity extends AppCompatActivity {
             }
 
             if (fitPos <= start) break;
-            pageOffsets.add(fitPos);
+            thisPageOffsets.add(fitPos);
 
+//            Log.w(TAG, "buildPageOffsetsWithCache"+ thisPageOffsets.size());
             // 克隆临时分页(边生成边显示)
-            if (isNewPageOffers && pageOffsets.size() >= 30 ) {
+            if (isNewPageOffers && thisPageOffsets.size() >= 30 ) {
                 Log.d(TAG, "pageOffsetsTemp > 30");
-                return  pageOffsets;
+
+                totalPages = thisPageOffsets.size() - 1;
+                seekBar.setMax(Math.max(totalPages, 1));
+                FileUtils.savePageOffsets(this, filePath+"temp", thisPageOffsets);
+                return  thisPageOffsets;
             }
-
-
-
             start = fitPos;
         }
 
-        totalPages = pageOffsets.size() - 1;
+        totalPages = thisPageOffsets.size() - 1;
         seekBar.setMax(Math.max(totalPages, 1));
-        FileUtils.savePageOffsets(this, filePath, pageOffsets);
-        return pageOffsets;
+        FileUtils.savePageOffsets(this, filePath, thisPageOffsets);
+        Log.d(TAG,  "PageOffsets="+thisPageOffsets.size());
+        return thisPageOffsets;
     }
 
 /*
     private int pageCharCount = 2000; // 默认值，加载后会动态估算
-
-    private void estimatePageCharCount() {
-        //Log.d(TAG, "estimatePageCharCount:11 ");
-        // 初始化 TextPaint
-
-
-        TextPaint textPaint = textView.getPaint();
-        int viewWidth = textView.getWidth(); // 获取 TextView 宽度
-        int viewHeight = textView.getHeight(); // 获取 TextView 高度
-
-        if (viewWidth == 0 || viewHeight == 0) {
-            // 视图尚未测量，延后执行
-            textView.post(() -> estimatePageCharCount());
-            return;
-        }
-        //Log.d(TAG, "estimatePageCharCount:22 ");
-        // 模拟一段中文字符
-        String sampleText = "这是用于测量的示例文字。";
-        StaticLayout layout = StaticLayout.Builder.obtain(sampleText, 0, sampleText.length(), textPaint, viewWidth)
-                .setAlignment(Layout.Alignment.ALIGN_NORMAL)
-                .build();
-        //Log.d(TAG, "estimatePageCharCount: 33");
-        int lineHeight = layout.getLineBottom(0) - layout.getLineTop(0); // 单行高度
-        int linesPerPage = viewHeight / lineHeight; // 每页可显示的行数
-
-        // 每行大致字符数（等宽字体估算），你也可以根据字体和缩放细调
-        int charsPerLine = 20;
-
-        pageCharCount = linesPerPage * charsPerLine;
-        appPreferences.setPageCharCount( pageCharCount);
-        Log.d("分页估算", "每页字符数约为：" + pageCharCount);
-        //Log.d(TAG, "estimatePageCharCount: 33");
-        // 构建 offset 分页 + 显示第一页
-        buildPageOffsets(filePath);
-//        loadPage(currentPage);
-    }
-*/
 
 
 /*
@@ -565,7 +523,6 @@ public class ReaderActivity extends AppCompatActivity {
     }
 
     private void speakCurrentPage() {
-
         isSpeaking = true;
         btnTTS.setText("⏸️");
         speakNextSentence();
@@ -582,7 +539,20 @@ public class ReaderActivity extends AppCompatActivity {
                     currentPage++;
                     appPreferences.setCurrentPage(currentPage);
 //                    loadPage(currentPage);
-                    loadPage( pageOffsets, currentPage);
+                    Log.d(TAG, "speakNextSentence: loadPage 4"+ pageOffsets.size() );
+
+                    Log.w(TAG, runPageOffsets+"speakNextSentence"+pageOffsets.isEmpty());
+                    if (runPageOffsets && pageOffsets.isEmpty() && pageOffsets.size() == 0) {
+                        runPageOffsets = false;
+                        textView.post(() -> {
+                            new Thread(() -> {
+                                Log.w(TAG, "buildPageOffsetsWithCache false");
+                                pageOffsets = buildPageOffsetsWithCache(filePath, false);
+                            }).start();
+                        });
+                    }
+                    loadPage(pageOffsetsTemp != null && !pageOffsetsTemp.isEmpty() ? pageOffsetsTemp : pageOffsets, currentPage);
+//                    loadPage( pageOffsets, currentPage);
                     speakCurrentPage();
                 } else {
                     // 读完所有页
@@ -645,8 +615,9 @@ public class ReaderActivity extends AppCompatActivity {
                     }
                     currentPage = p;
 //                    loadPage(p);
-
-                    loadPage( pageOffsets, p);
+                    Log.d(TAG, "setupSeekBar: loadPage 5");
+//                    loadPage( pageOffsets, p);
+                    loadPage(pageOffsetsTemp != null && !pageOffsetsTemp.isEmpty() ? pageOffsetsTemp : pageOffsets, p);
                 }
             }
             public void onStartTrackingTouch(SeekBar seekBar) {}
@@ -678,14 +649,19 @@ public class ReaderActivity extends AppCompatActivity {
                     if (currentPage > 0) {
                         currentPage--;
 //                        loadPage(currentPage);
-                        loadPage(pageOffsets, currentPage);
+                        Log.d(TAG, "setupTouchControl: loadPage 6");
+//                        loadPage(pageOffsets, currentPage);
+                        loadPage(pageOffsetsTemp != null && !pageOffsetsTemp.isEmpty() ? pageOffsetsTemp : pageOffsets, currentPage);
                     }
                 } else if (x > width * 2 / 3f) {
                     if (currentPage < totalPages - 1) {
                         currentPage++;
 //                        loadPage(currentPage);
-                        loadPage(pageOffsets, currentPage);
+                        Log.d(TAG, "setupTouchControl: loadPage 7");
+//                        loadPage(pageOffsets, currentPage);
+                        loadPage(pageOffsetsTemp != null && !pageOffsetsTemp.isEmpty() ? pageOffsetsTemp : pageOffsets, currentPage);
                     }
+
                 } else {
                     controlActivity.toggleVisibility();
                 }
