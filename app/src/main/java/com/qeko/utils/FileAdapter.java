@@ -132,7 +132,7 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
             holder.icon.setImageResource(R.drawable.ic_file);
         }
 
-        // ===== 文件可用性（pdf/epub） =====
+/*        // ===== 文件可用性（pdf/epub） =====
         String absolutePath = item.getFile().getAbsolutePath();
         if (absolutePath.toLowerCase().endsWith(".pdf")) {
             File pdftxt = new File(absolutePath + ".pdftxt");
@@ -147,7 +147,7 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
         } else {
             holder.itemView.setEnabled(true);
             holder.itemView.setAlpha(1.0f);
-        }
+        }*/
 
         // 点击事件
         holder.itemView.setOnClickListener(v -> {

@@ -22,15 +22,51 @@ public class AppPreferences {
 
 
 
-//    private static final String PREFS_NAME = "reader_prefs";
+    private static final String PREFS_NAME = "reader_prefs";
     private static final String KEY_TOTAL_PAGES = "total_pages";
     private static final String KEY_MAX_CHARS = "max_chars_per_page";
     private static final String KEY_CURRENT_PAGE = "current_page";
 
     private final SharedPreferences preferences;
 
-    public AppPreferences(Context context) {
+/*    public AppPreferences(Context context) {
         preferences = PreferenceManager.getDefaultSharedPreferences(context);
+    }*/
+
+    public void saveTextLength(String filePath, int length) {
+        preferences.edit().putInt("textLength_" + filePath.hashCode(), length).apply();
+    }
+
+    public int getTextLength(String filePath) {
+        return preferences.getInt("textLength_" + filePath.hashCode(), 0);
+    }
+
+    public void savePageCharCount(String filePath, int count) {
+        preferences.edit().putInt("pageCharCount_" + filePath.hashCode(), count).apply();
+    }
+
+    public int getPageCharCount(String filePath) {
+        return preferences.getInt("pageCharCount_" + filePath.hashCode(), 0);
+    }
+
+    public void saveCurrentPage(String filePath, int page) {
+        preferences.edit().putInt("currentPage_" + filePath.hashCode(), page).apply();
+    }
+
+    public int getCurrentPage(String filePath) {
+        return preferences.getInt("currentPage_" + filePath.hashCode(), 0);
+    }
+
+
+    public void saveSentenceIndex(String filePath, int index) {
+        preferences.edit().putInt("sentenceIndex_" + filePath.hashCode(), index).apply();
+    }
+
+    public int getSentenceIndex(String filePath) {
+        return preferences.getInt("sentenceIndex_" + filePath.hashCode(), 0);
+    }
+    public AppPreferences(Context context) {
+        preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
 
     public String getLastFilePath() {
@@ -42,21 +78,21 @@ public class AppPreferences {
     }
 
 
-    public int getPageCharCount() {
+/*    public int getPageCharCount() {
         return preferences.getInt(PREF_PAGECHARCOUNT, 0);
     }
 
     public void setPageCharCount(int pagecharcount) {
         preferences.edit().putInt(PREF_PAGECHARCOUNT, pagecharcount).apply();
-    }
+    }*/
 
-    public int getTextLength() {
+/*    public int getTextLength() {
         return preferences.getInt(PREF_TEXTLEMGTH, 0);
     }
 
     public void setTextLength(int page) {
         preferences.edit().putInt(PREF_TEXTLEMGTH, page).apply();
-    }
+    }*/
 
     public int getLastPage() {
         return preferences.getInt(PREF_LAST_PAGE, 0);
@@ -150,14 +186,15 @@ public class AppPreferences {
         preferences.edit().putInt(KEY_MAX_CHARS, maxChars).apply();
     }
 
-    // ---------- Current Page ----------
+
+/*    // ---------- Current Page ----------
     public int getCurrentPage() {
         return preferences.getInt(KEY_CURRENT_PAGE, 0);
     }
 
     public void setCurrentPage(int page) {
         preferences.edit().putInt(KEY_CURRENT_PAGE, page).apply();
-    }
+    }*/
 
 
 

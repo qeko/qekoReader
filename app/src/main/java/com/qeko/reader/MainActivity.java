@@ -437,11 +437,11 @@ private        ArrayList<File> pdfList;
 
         // 🧠 判断是否包含目标类型文件
         if (FileUtils.countMatchingFiles(dir, new BookFileStrategy()) > 0) {
-             pdfList = (ArrayList<File>) scanFiles(dir, new String[]{".pdf",".epub"});
+ /*            pdfList = (ArrayList<File>) scanFiles(dir, new String[]{".pdf",".epub"});
 
             if(pdfList !=null && pdfList.size() > 0) {
                 FileUtils.processPdfListInBackground(pdfList, MainActivity.this);
-            }
+            }*/
 
 //            pdfList =  (ArrayList<File>)scanFiles(dir, new String[]{".epub"});
 

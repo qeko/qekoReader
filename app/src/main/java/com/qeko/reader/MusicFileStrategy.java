@@ -14,7 +14,7 @@ public class MusicFileStrategy implements FileTypeStrategy {
         Log.d("MusicFileStrategy", "accept1: "+name);
         for (String ext : EXTENSIONS) {
             if (name.endsWith("." + ext)) {
-                Log.d("MusicFileStrategy", "accept2: "+name);
+//                Log.d("MusicFileStrategy", "accept2: "+name);
                 return true;
             }
         }

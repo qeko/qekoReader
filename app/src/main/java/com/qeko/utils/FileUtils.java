@@ -103,6 +103,7 @@ public class FileUtils {
 
     private static   ExecutorService executorService ;
 
+/*
     public static  void processPdfListInBackground(final ArrayList<File> fileList, final Context context) {
         new Thread(() -> {
             for (File file : fileList) {
@@ -123,6 +124,7 @@ public class FileUtils {
                             if (tempFile.exists()) tempFile.delete();
 //                            extractTextFromPdf(file, context);
                             extractTextFromPdf(file, context, "fonts/SimsunExtG.ttf");
+
                         }
                     } else if (nameLower.endsWith(".epub")) {
                         // 生成临时文件路径
@@ -150,6 +152,7 @@ public class FileUtils {
 
 
     }
+*/
 
 /*
     public static void processPdfListInBackground(ArrayList<File> pdfFiles, Context context) {
@@ -187,7 +190,7 @@ public class FileUtils {
         });
     }
 */
-
+/*
     public static String extractTextFromPdf(File file, Context context, String fontAssetPath) {
         StringBuilder text = new StringBuilder();
         PdfReader reader = null;
@@ -210,7 +213,7 @@ public class FileUtils {
             }
         }
         return text.toString();
-    }
+    }*/
     /*
     public static void extractTextFromPdf(File pdfFile, Context context) {
         String pdfPath = pdfFile.getAbsolutePath();
@@ -435,12 +438,49 @@ public class FileUtils {
 
 
 
+    public static void extractTextFromPdf(File pdfFile, Context context, String fontPath) {
+        String outputPath = pdfFile.getAbsolutePath() + ".pdftxt";
+        Log.d("FileUtils", "开始解析PDF: " + pdfFile.getAbsolutePath());
+
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
+                new FileOutputStream(outputPath, false), StandardCharsets.UTF_8))) {
+
+            PdfReader reader = new PdfReader(pdfFile.getAbsolutePath());
+            int totalPages = reader.getNumberOfPages();
+            int batchSize = 10; // 每10页写一次
+
+            for (int page = 1; page <= totalPages; page++) {
+                String text = PdfTextExtractor.getTextFromPage(reader, page);
+
+                if (text != null && !text.trim().isEmpty()) {
+                    writer.write(text);
+                    writer.newLine();
+                } else {
+                    writer.write("[第 " + page + " 页无可提取文本,PDF 存的不是文字，而是 扫描图片]");
+                    writer.newLine();
+                }
+
+                if (page % batchSize == 0 || page == totalPages) {
+                    writer.flush();
+                    Log.d("FileUtils", "已写入页码: " + (page - batchSize + 1) + "-" + page);
+                }
+            }
+
+            reader.close();
+            Log.d("FileUtils", "PDF解析完成，输出路径: " + outputPath);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e("FileUtils", "PDF解析失败: " + e.getMessage());
+        }
+    }
 
     /**
      * 从PDF提取文字并按100页批次追加写入 .pdftxt 文件
 
      * @return 生成的 .pdftxt 文件路径
      */
+
 /*
     public static boolean extractTextFromPdf(File pdfFile, Context context, File outputTxtFile) {
         String pdfPath = pdfFile.getAbsolutePath();
@@ -491,6 +531,7 @@ public class FileUtils {
         return  true;
     }
 */
+
 
     private static Charset detectEncoding(File file) {
         byte[] buf = new byte[4096];

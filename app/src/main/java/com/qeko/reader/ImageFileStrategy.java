@@ -14,7 +14,7 @@ public class ImageFileStrategy implements FileTypeStrategy {
         Log.d("ImageFileStrategy", "accept1: "+name);
         for (String ext : EXTENSIONS) {
             if (name.endsWith("." + ext)) {
-                Log.d("ImageFileStrategy", "accept2: "+name);
+//                Log.d("ImageFileStrategy", "accept2: "+name);
                 return true;
             }
         }

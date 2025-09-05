@@ -14,7 +14,7 @@ public class BookFileStrategy implements FileTypeStrategy {
         Log.d("BookFileStrategy", "accept1: "+name);
         for (String ext : EXTENSIONS) {
             if (name.endsWith("." + ext)) {
-                Log.d("BookFileStrategy", "accept2: "+name);
+//                Log.d("BookFileStrategy", "accept2: "+name);
                 return true;
             }
         }
