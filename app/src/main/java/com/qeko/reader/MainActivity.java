@@ -34,6 +34,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 
 import com.bumptech.glide.Glide;
+import com.qeko.utils.AppPreferences;
 import com.qeko.utils.FileAdapter;
 import com.qeko.utils.FileItem;
 import com.qeko.utils.FileUtils;
@@ -115,8 +116,20 @@ public class MainActivity extends Activity {
         Button btnScan = findViewById(R.id.btnScan);
         btnScan.setOnClickListener(v -> scanDocuments());
 
-
+        startExitTimer();
     }
+
+    private void startExitTimer() {
+        AppPreferences prefs = new AppPreferences(this);
+        long exitTime = prefs.getExitTime();
+        if (exitTime > 0) {
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                finishAffinity(); // 关闭整个App
+                System.exit(0);
+            }, exitTime);
+        }
+    }
+
 
     private List<File> loadImageFiles() {
         // TODO: 递归扫描或读取保存的图片目录文件列表
