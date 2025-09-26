@@ -100,6 +100,16 @@ import java.util.List;
          mediaPlayer.setOnCompletionListener(mp -> playNext());
      }
 
+     public boolean hasTrackLoaded() {
+         return mediaPlayer != null;
+     }
+
+     public void resume() {
+         if (mediaPlayer != null && !mediaPlayer.isPlaying()) {
+             mediaPlayer.start();
+         }
+     }
+
 /*
      private void playCurrent() {
          if (musicFiles.isEmpty()) return;
@@ -126,7 +136,7 @@ import java.util.List;
      public void play(Uri uri) {
 
          try {
-             mediaPlayer.reset();
+//             mediaPlayer.reset();
              mediaPlayer.setDataSource(getApplicationContext(), uri);
              mediaPlayer.prepare();
              mediaPlayer.start();

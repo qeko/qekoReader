@@ -1,32 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/musicPlayerRoot"
-    android:layout_width="wrap_content"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
     android:background="#F0F0F0"
-    android:padding="8dp"
-     >
+    android:orientation="vertical"
+    android:padding="8dp">
 
     <TextView
         android:id="@+id/tvSongTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="歌曲名称"
-        android:textSize="16sp"
-        android:textStyle="bold"
         android:ellipsize="end"
         android:singleLine="true"
-        android:textColor="#000000" />
+        android:text="歌曲名称"
+        android:textColor="#000000"
+        android:textSize="16sp"
+        android:textStyle="bold" />
 
     <TextView
         android:id="@+id/tvCurrentTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
         android:text="00:00 / 00:00"
-        android:textSize="10sp"
         android:textColor="#666666"
-        android:layout_marginTop="4dp" />
+        android:textSize="10sp" />
 
     <SeekBar
         android:id="@+id/seekBar"
@@ -38,37 +37,39 @@
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center">
-       <Button
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <Button
             android:id="@+id/btnRepeatMode"
-            android:textColor="#FFFFFF"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:text="🔁"
-           android:textSize="24sp"
-           android:layout_width="wrap_content"
-           android:layout_height="wrap_content"     />
+            android:textColor="#FFFFFF"
+            android:textColorLink="#F44336"
+            android:textSize="24sp" />
 
         <Button
             android:id="@+id/btnPlayPause"
-            android:textSize="24sp"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="▶️"  />
+            android:text="▶️"
+            android:textColorLink="#F44336"
+            android:textSize="24sp" />
 
         <Button
             android:id="@+id/btnNext"
-            android:textSize="24sp"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="⏭️"/>
+            android:text="⏭️"
+            android:textColorLink="#F44336"
+            android:textSize="24sp" />
 
-<!--        <Button
+        <!--        <Button
             android:id="@+id/btnPrev"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="⏮" />-->
-
-
 
 
     </LinearLayout>

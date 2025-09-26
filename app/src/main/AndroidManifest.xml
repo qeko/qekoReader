@@ -58,14 +58,15 @@
             android:excludeFromRecents="true"
             android:theme="@style/BottomDialogTheme" />
 
-<!--        android:theme="@style/Theme.AppCompat.Light.NoActionBar" />-->
+<!--     android:theme="@style/BottomDialogTheme" />  -->
+<!--     android:theme="@style/Theme.AppCompat.Light.NoActionBar" />-->
 
         <activity android:name=".ReaderActivity"
             android:exported="true"
             android:configChanges="orientation|keyboardHidden|screenSize"/>
          <activity
             android:name=".MainActivity"
-             android:screenOrientation="portrait"
+            android:screenOrientation="portrait"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

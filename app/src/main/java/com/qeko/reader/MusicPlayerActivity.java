@@ -1,6 +1,5 @@
 package com.qeko.reader;
 
-
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
@@ -19,8 +18,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.File;
 
-
-
 public class MusicPlayerActivity extends AppCompatActivity {
     private MusicService musicService;
     private boolean isBound = false;
@@ -30,6 +27,7 @@ public class MusicPlayerActivity extends AppCompatActivity {
     private ServiceConnection connection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
+            Log.d("TAG", "onServiceConnected: ");
             MusicService.MusicBinder binder = (MusicService.MusicBinder) service;
             musicService = binder.getService();
             isBound = true;
@@ -69,42 +67,47 @@ public class MusicPlayerActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_music_player);
-
+        Log.d("TAG", "onCreate1: ");
         tvSongTitle = findViewById(R.id.tvSongTitle);
         tvCurrentTime = findViewById(R.id.tvCurrentTime);
         seekBar = findViewById(R.id.seekBar);
         btnPlayPause = findViewById(R.id.btnPlayPause);
         btnNext = findViewById(R.id.btnNext);
         btnRepeatMode = findViewById(R.id.btnRepeatMode);
-
+        Log.d("TAG", "onCreate2: ");
         String filePath = getIntent().getStringExtra("filePath");
         if (filePath != null) {
             currentMusicUri = Uri.fromFile(new File(filePath));
         }
-
+        Log.d("TAG", "onCreate3: ");
         Intent intent = new Intent(this, MusicService.class);
         startService(intent);              // 保证服务在后台运行
         bindService(intent, connection, BIND_AUTO_CREATE); // 绑定服务，方便控制播放
-
+        Log.d("TAG", "onCreate4: ");
         btnPlayPause.setOnClickListener(v -> {
             if (!isBound || musicService == null) return;
 
             if (musicService.isPlaying()) {
+                // 正在播 → 暂停
                 musicService.pause();
                 btnPlayPause.setText("▶️");
             } else {
-                if (currentMusicUri != null) {
-
-                    tvSongTitle.setText( new File(currentMusicUri.getPath()).getName());
-                    btnPlayPause.setText("⏸️");
-                    startSeekBarUpdater();
+                // 暂停状态 → 继续播
+                if (musicService.hasTrackLoaded()) {
+                    musicService.resume();
+                } else if (currentMusicUri != null) {
+                    // 第一次播放
                     musicService.play(currentMusicUri);
                 }
+                tvSongTitle.setText(new File(currentMusicUri.getPath()).getName());
+                btnPlayPause.setText("⏸️");
+                startSeekBarUpdater();
             }
         });
 
-        btnNext.setOnClickListener(v -> {
 
+
+        btnNext.setOnClickListener(v -> {
             musicService.playNext();
             // TODO: 这里可以调用 musicService.playNext() 等方法，需在服务实现
             tvSongTitle.setText( new File(currentMusicUri.getPath()).getName());
@@ -171,6 +174,7 @@ public class MusicPlayerActivity extends AppCompatActivity {
 
     @Override
     protected void onStart() {
+        Log.d("TAG", "onStart: ");
         super.onStart();
         MusicServiceConnector.getInstance().bind(this, service -> {
             musicService = service;
@@ -182,19 +186,12 @@ public class MusicPlayerActivity extends AppCompatActivity {
                 startSeekBarUpdater();
             }));
 
-            String filePath = getIntent().getStringExtra("filePath");
+/*            String filePath = getIntent().getStringExtra("filePath");
             if (filePath != null) {
                 musicService.setMusicFromFilePath(filePath);
-            }
+            }*/
         });
     }
-
-/*    @Override
-    protected void onStart() {
-        super.onStart();
-        Intent intent = new Intent(this, MusicService.class);
-        bindService(intent, connection, Context.BIND_AUTO_CREATE);
-    }*/
 
     @Override
     protected void onStop() {
@@ -202,13 +199,5 @@ public class MusicPlayerActivity extends AppCompatActivity {
         MusicServiceConnector.getInstance().unbind(this);
     }
 
-    /*
-    @Override
-    protected void onStop() {
-        super.onStop();
-        if (isBound) {
-            unbindService(connection);
-            isBound = false;
-        }
-    }*/
+
 }

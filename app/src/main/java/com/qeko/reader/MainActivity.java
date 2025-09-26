@@ -170,32 +170,6 @@ public class MainActivity extends Activity {
         }
     }
 
-/*
-    private void reloadWithStrategy(FileTypeStrategy strategy) {
-        File root = Environment.getExternalStorageDirectory();
-        List<File> filteredFiles = FileUtils.scanAll(root, strategy);
-        folderMap.clear();
-        for (File file : filteredFiles) {
-            File parent = file.getParentFile();
-            folderMap.computeIfAbsent(parent, k -> new ArrayList<>()).add(file);
-        }
-        displayItems.clear();
-        for (Map.Entry<File, List<File>> entry : folderMap.entrySet()) {
-            File folder = entry.getKey();
-            List<File> files = entry.getValue();
-            FileItem folderItem = new FileItem(folder, true);
-            folderItem.setExpanded(true);
-            List<FileItem> children = new ArrayList<>();
-            for (File f : files) {
-                FileItem item = new FileItem(f, false);
-                children.add(item);
-            }
-            folderItem.setChildren(children);
-            displayItems.add(folderItem);
-        }
-        adapter.setItems(displayItems);
-    }
-*/
 
     private void switchCategory(FileTypeStrategy strategy, String cacheKey) {
         this.currentStrategy = strategy;
@@ -204,61 +178,11 @@ public class MainActivity extends Activity {
 
 
 
-/*        ImageView  icon = findViewById(R.id.icon);
-            if ("IMAGE_DIRS".equals(cacheKey)) {
-                ViewGroup.LayoutParams params = icon.getLayoutParams();
-                params.width = params.width * 13;   // 放大3倍
-                params.height = params.height * 13; // 放大3倍
-                icon.setLayoutParams(params);
-        }*/
-
-
         showFiles(files);
 
 
     }
 
-/*
-    private void showFiles(List<File> files) {
-        folderMap.clear();
-        for (File file : files) {
-            File parent = file.getParentFile();
-            folderMap.computeIfAbsent(parent, k -> new ArrayList<>()).add(file);
-        }
-
-        displayItems.clear();
-        for (Map.Entry<File, List<File>> entry : folderMap.entrySet()) {
-            File folder = entry.getKey();
-            List<File> filesInFolder = entry.getValue();
-
-            FileItem folderItem = new FileItem(folder, true);
-            folderItem.setDocumentCount(filesInFolder.size());
-            folderItem.setExpanded(true);
-
-            List<FileItem> childItems = new ArrayList<>();
-            for (File f : filesInFolder) {
-                FileItem item = new FileItem(f, false);
-                应该是在这里处理 读出保存的最后文件进行比较，如果相等则 显示红色，带 上ic-pin 图标，
-                不太清楚置顶要如何处理？
-                childItems.add(item);
-            }
-            folderItem.setChildren(childItems);
-            displayItems.add(folderItem);
-        }
-
-        adapter = new FileAdapter(displayItems);
-        recyclerView.setAdapter(adapter);
-
-        adapter.setOnItemClickListener(item -> {
-            if (item.isFolder()) {
-                item.setExpanded(!item.isExpanded());
-                adapter.refreshDisplayItems();
-            } else {
-                openFile(item.getFile());
-            }
-        });
-    }
-*/
 
     private boolean isImageFile(File file) {
         String name = file.getName().toLowerCase();
@@ -266,7 +190,6 @@ public class MainActivity extends Activity {
                 name.endsWith(".png") || name.endsWith(".gif") ||
                 name.endsWith(".bmp") || name.endsWith(".webp");
     }
-
 
     private void showFiles(List<File> files) {
         folderMap.clear();
@@ -392,15 +315,7 @@ public class MainActivity extends Activity {
                 .apply();
     }
 
-/*
-    // 打开文件后保存最近访问文件路径示例
-    private void savePinnedFilePath(String path) {
-        SharedPreferences sp = getSharedPreferences("recent_files", MODE_PRIVATE);
-        Set<String> pinnedSet = sp.getStringSet("pinned_paths", new HashSet<>());
-        pinnedSet.add(path);
-        sp.edit().putStringSet("pinned_paths", pinnedSet);//.apply();
-    }
-*/
+
 
     private void scanDocuments() {
         Toast.makeText(this, "正在扫描，请稍候...", Toast.LENGTH_SHORT).show();
