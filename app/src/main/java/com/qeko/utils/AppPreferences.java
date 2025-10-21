@@ -2,8 +2,8 @@ package com.qeko.utils;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import androidx.preference.PreferenceManager;
 
+import com.qeko.reader.ReaderActivity;
 
 
 public class AppPreferences {
@@ -25,7 +25,7 @@ public class AppPreferences {
     private static final String KEY_TOTAL_PAGES = "total_pages";
     private static final String KEY_MAX_CHARS = "max_chars_per_page";
 
-    public AppPreferences(Context context) {
+    public AppPreferences(ReaderActivity context) {
         preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
 

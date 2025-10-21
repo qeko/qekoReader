@@ -67,8 +67,9 @@
 
 
 
+<!--
 
-    <!-- 定时退出 -->
+    &lt;!&ndash; 定时退出 &ndash;&gt;
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="wrap_content"
@@ -103,6 +104,7 @@
                 android:text="10分钟退出" />
         </RadioGroup>
        </LinearLayout>
+-->
 
 
     <!-- 亮度调节 -->

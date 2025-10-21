@@ -17,6 +17,7 @@ import android.widget.Toast;
 import androidx.preference.PreferenceManager;
 
 import com.qeko.tts.TextToSpeechManager;
+import com.qeko.utils.AppPreferences;
 
 import java.util.List;
 
@@ -35,7 +36,7 @@ public class ControlActivity {
         setupSpeedControls();
         setupFontSizeControls();
         setupThemeToggle();
-        setupExitTimer();
+//        setupExitTimer();
 //        setupSimplifyConvert();
         setupBrightnessControl();
         setupFontSelector();
@@ -102,7 +103,7 @@ public class ControlActivity {
                         }
                     }
 
-                    int newSentence = 0; // 可以根据 offset 定位更精确的句子
+//                    int newSentence = 0; // 可以根据 offset 定位更精确的句子
 
                     int finalNewPage = newPage;
                     activity.runOnUiThread(() -> activity.loadPage(newOffsets, finalNewPage));
@@ -112,6 +113,7 @@ public class ControlActivity {
         });
     }
 
+/*
     private void setupExitTimer() {
             RadioGroup timerGroup = panel.findViewById(R.id.radioExitTimer);
     //        TextView exitLabel = panel.findViewById(R.id.labelExitHint); // “分钟后退出”
@@ -129,9 +131,12 @@ public class ControlActivity {
                     exitRunnable = () -> activity.finish();
                     handler.postDelayed(exitRunnable, minutes * 60 * 1000L);
     //                exitLabel.setText(minutes + " 分钟后退出");
+                    activity.appPreferences.setExitTime(minutes);
                 }
             });
+
     }
+*/
 
 /*    private void setupSimplifyConvert() {
         panel.findViewById(R.id.btnConvert).setOnClickListener(v -> {

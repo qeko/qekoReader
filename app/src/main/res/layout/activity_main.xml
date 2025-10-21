@@ -71,6 +71,12 @@
             android:layout_height="wrap_content"
             android:text="🔄 刷新" />
 
+        <Button
+            android:id="@+id/btnSetTime"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🕢" />
+
 <!--        <Button
             android:id="@+id/btnSetting"
             android:layout_width="match_parent"
@@ -120,11 +126,101 @@
 
 
 </LinearLayout>
+
+    <!-- 定时退出面板 -->
+    <LinearLayout
+        android:id="@+id/setttime"
+        android:layout_below="@id/btnSetTime"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="6dp"
+        android:background="#EEEEEE"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="定时退出时间"
+            android:textSize="18sp"
+            android:textColor="#000000"/>
+
+        <TextView
+            android:id="@+id/tvCountdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textSize="20sp"
+            android:layout_marginTop="10dp" />
+
+
+        <RadioGroup
+            android:id="@+id/radioGroupTime"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <RadioButton
+                android:id="@+id/radio10min"
+                android:text="10分钟"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <RadioButton
+                android:id="@+id/radio30min"
+                android:text="30分钟"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <RadioButton
+                android:id="@+id/radio60min"
+                android:text="60分钟"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <RadioButton
+                android:id="@+id/radio120min"
+                android:text="120分钟"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <RadioButton
+            android:id="@+id/radio0min"
+            android:text="关闭"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+        </RadioGroup>
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:id="@+id/confirmLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        android:layout_marginTop="20dp">
+
+        <Button
+            android:id="@+id/btnConfirm"
+            android:text="确定"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp" />
+
+        <Button
+            android:id="@+id/btnCancel"
+            android:text="取消"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
+
     <include
         android:id="@+id/controlPanel"
         layout="@layout/activity_control"
         android:visibility="gone"
         android:background="@android:color/transparent" />
+
 
 </LinearLayout>
 

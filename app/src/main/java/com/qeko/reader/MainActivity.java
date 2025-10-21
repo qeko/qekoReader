@@ -1,40 +1,41 @@
 package com.qeko.reader;
 
-import static android.content.ContentValues.TAG;
+import static android.service.controls.ControlsProviderService.TAG;
 
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
+
 import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.Button;
-import android.widget.ImageView;
+
+import android.widget.LinearLayout;
+import android.widget.RadioGroup;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.app.Activity;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.preference.PreferenceManager;
-import androidx.recyclerview.widget.GridLayoutManager;
+
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 
-import com.bumptech.glide.Glide;
-import com.qeko.utils.AppPreferences;
 import com.qeko.utils.FileAdapter;
 import com.qeko.utils.FileItem;
 import com.qeko.utils.FileUtils;
@@ -49,25 +50,33 @@ public class MainActivity extends Activity {
     private FileAdapter adapter;
     private List<FileItem> displayItems = new ArrayList<>();
     private Map<File, List<File>> folderMap = new HashMap<>();
-    private static final String PREFS_NAME = "scan_cache";
-    private static final String LAST_FILE_PATH = "lastFilePath";
+//    private static final String PREFS_NAME = "scan_cache";
+//    private static final String LAST_FILE_PATH = "lastFilePath";
     private Button btnBooks, btnImages, btnMusic, btnVideo;
+    private Button  btnConfirm,btnCancel;
     private FileTypeStrategy currentStrategy;
     private String currentCacheKey;
     private Spinner spinner;
     private Handler handler = new Handler(Looper.getMainLooper());
     private Runnable exitRunnable;
+    private TextView tvCountdown;
 
-    private ControlActivity controlActivity;
-
-    private RecyclerView rvImages;
+    private View panel;
+    private RadioGroup timerGroup;
+    private RadioGroup radioGroupTime;
+    private SharedPreferences sp;
+    private LinearLayout confirmLayout;
+    private CountDownTimer countDownTimer;
+    private long selectedTimeMillis = 0;
+/*    private RecyclerView rvImages;
     private Button btnSwitchView;
-    private boolean isGrid = true; // 当前是否为网格视图
+    private boolean isGrid = true; // 当前是否为网格视图*/
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+//        setContentView(R.layout.activity_settime);
 
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -82,8 +91,6 @@ public class MainActivity extends Activity {
         btnMusic = findViewById(R.id.btnMusic);
         btnVideo = findViewById(R.id.btnVideo);
 //        btnSetting = findViewById(R.id.btnSetting);
-
-
 
         btnBooks.setOnClickListener(v -> switchCategory(new BookFileStrategy(), "BOOK_DIRS"));
         btnImages.setOnClickListener(v -> switchCategory(new ImageFileStrategy(), "IMAGE_DIRS"));
@@ -115,20 +122,146 @@ public class MainActivity extends Activity {
 
         Button btnScan = findViewById(R.id.btnScan);
         btnScan.setOnClickListener(v -> scanDocuments());
+        btnConfirm = findViewById(R.id.btnConfirm);
+        btnCancel = findViewById(R.id.btnCancel);
+        radioGroupTime = findViewById(R.id.radioGroupTime);
+        tvCountdown = findViewById(R.id.tvCountdown);
+//        sp = getSharedPreferences("reader_prefs", MODE_PRIVATE);
 
-        startExitTimer();
+        Button btnSetTime = findViewById(R.id.btnSetTime);
+        panel = findViewById(R.id.setttime);
+        timerGroup = findViewById(R.id.radioGroupTime);
+
+        // 按钮点击后显示/隐藏 RadioGroup 面板
+        btnSetTime.setOnClickListener(v -> {
+            if (panel.getVisibility() == View.VISIBLE) {
+                panel.setVisibility(View.GONE);
+            } else {
+                panel.setVisibility(View.VISIBLE);
+            }
+        });
+
+
+
+        // 设置监听器：点击 RadioButton 时保存并启动倒计时
+        timerGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            Log.d(TAG, "onCreate:  setOnCheckedChangeListener"+checkedId);
+            int minutes = 0;
+            if (checkedId == R.id.radio10min) minutes = 10;
+            else if (checkedId == R.id.radio30min) minutes = 30;
+            else if (checkedId == R.id.radio60min) minutes = 60;
+            else if (checkedId == R.id.radio120min) minutes = 120;
+            else if (checkedId == R.id.radio0min) cancelCountdown();
+
+            // 取消上一次任务
+            if (exitRunnable != null) handler.removeCallbacks(exitRunnable);
+
+            if (minutes > 0) {
+                long delay = minutes * 60 * 1000L;
+
+                // 保存退出时间（分钟）
+//                sp.edit().putInt("exit_time_min", minutes).apply();
+
+                // 启动新的倒计时任务
+                exitRunnable = () -> {
+//                    Toast.makeText(this, "时间到，应用即将退出", Toast.LENGTH_SHORT).show();
+                    finishAffinity(); // 关闭整个应用
+                };
+                handler.postDelayed(exitRunnable, delay);
+
+//                Toast.makeText(this, "将在 " + minutes + " 分钟后退出", Toast.LENGTH_SHORT).show();
+                startCountdown(  minutes * 60 *  1000L);
+            } else {
+//                sp.edit().remove("exit_time_min").apply();
+//                Toast.makeText(this, "已取消定时退出", Toast.LENGTH_SHORT).show();
+            }
+
+        });
+
+
+
+        btnConfirm.setOnClickListener(v -> {
+            int checkedId = radioGroupTime.getCheckedRadioButtonId();
+            if (checkedId == -1) {
+                Toast.makeText(this, "请选择时间", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+
+            if (checkedId == R.id.radio10min) selectedTimeMillis = 1;
+            else if (checkedId == R.id.radio30min) selectedTimeMillis = 3;
+            else if (checkedId == R.id.radio60min) selectedTimeMillis = 60;
+            else if (checkedId == R.id.radio120min) selectedTimeMillis = 120;
+
+            startCountdown(selectedTimeMillis);
+            radioGroupTime.setVisibility(View.GONE);
+            confirmLayout.setVisibility(View.GONE);
+        });
+
+        btnCancel.setOnClickListener(v -> {
+            radioGroupTime.setVisibility(View.GONE);
+            confirmLayout.setVisibility(View.GONE);
+            cancelCountdown();
+        });
+
     }
 
-    private void startExitTimer() {
-        AppPreferences prefs = new AppPreferences(this);
-        long exitTime = prefs.getExitTime();
-        if (exitTime > 0) {
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                finishAffinity(); // 关闭整个App
-                System.exit(0);
-            }, exitTime);
+    private void startCountdown(long millis) {
+        // 先取消已有计时器，防止重复
+        cancelCountdown();
+
+        // 立即显示初始剩余时间（onTick 第一次会在 interval 之后调用）
+        updateCountdownUi(millis);
+
+        // 每 1s 回调一次
+        countDownTimer = new CountDownTimer(millis, 1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {
+                // 每次回调用传入的剩余毫秒数更新 UI
+                updateCountdownUi(millisUntilFinished);
+            }
+
+            @Override
+            public void onFinish() {
+                tvCountdown.setText("倒计时结束！");
+                tvCountdown.setTextColor(Color.BLACK);
+                // 如果需要在结束时做其他操作，在这里添加
+                finishAffinity();
+            }
+        };
+
+        countDownTimer.start();
+    }
+
+    private void cancelCountdown() {
+        if (countDownTimer != null) {
+            countDownTimer.cancel();
+            countDownTimer = null;
+        }
+        tvCountdown.setText("倒计时已取消");
+        tvCountdown.setTextColor(Color.BLACK);
+    }
+
+    /** 辅助：把剩余毫秒数格式化并更新 UI（复用在开始和 onTick） */
+    private void updateCountdownUi(long millisUntilFinished) {
+        long seconds = (millisUntilFinished + 999) / 1000; // 上取整为秒，避免显示 29.5s -> 29s 造成混乱
+        tvCountdown.setText("剩余时间：" + seconds + " 秒");
+        if (seconds <= 10) {
+            tvCountdown.setTextColor(Color.RED);
+        } else {
+            tvCountdown.setTextColor(Color.BLACK);
         }
     }
+
+    private void startExitCountdown(int minutes) {
+        if (exitRunnable != null) handler.removeCallbacks(exitRunnable);
+        exitRunnable = () -> {
+            Toast.makeText(this, "时间到，应用即将退出", Toast.LENGTH_SHORT).show();
+            finishAffinity();
+        };
+        handler.postDelayed(exitRunnable, minutes * 60 * 1000L);
+    }
+
 
 
     private List<File> loadImageFiles() {
@@ -175,12 +308,7 @@ public class MainActivity extends Activity {
         this.currentStrategy = strategy;
         this.currentCacheKey = cacheKey;
         List<File> files = FileUtils.reloadWithStrategy(this, strategy, cacheKey);
-
-
-
         showFiles(files);
-
-
     }
 
 
@@ -511,6 +639,8 @@ private        ArrayList<File> pdfList;
             }
         }
     }*/
+
+
 
     @Override
     protected void onDestroy() {

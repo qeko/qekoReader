@@ -448,51 +448,6 @@ public class ReaderActivity extends AppCompatActivity {
         btnTTS.setText("⏸️");
         speakNextSentence();
     }
-/*
-    private void speakNextSentence() {
-        appPreferences.saveCurrentPage(filePath,currentPage);
-        if(currentSentences!=null)
-        {
-            if (sentenceIndex >= currentSentences.length) {
-                if (currentPage < totalPages - 1) {
-                    currentPage++;
-                    sentenceIndex = 0; // ✅ 重置
-                    appPreferences.saveCurrentPage(filePath, currentPage);
-                    loadPage(pageOffsetsTemp != null && !pageOffsetsTemp.isEmpty() ? pageOffsetsTemp : pageOffsets, currentPage);
-                    speakCurrentPage();
-                } else {
-                    isSpeaking = false;
-                    btnTTS.setText("▶️");
-                    highlightSentence(-1);
-                }
-            }
-            String sentence = currentSentences[sentenceIndex];
-            highlightSentence(sentenceIndex);
-            // 清理多余特殊字符和引号，防止TTS读错
-            sentence = sentence.replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9\\s]{3,}", "");
-            sentence = sentence.replaceAll("[\"“”]", "");
-            sentence = sentence.replaceAll("\\.", "");
-
-            ttsManager.speak(sentence);
-            return;
-        }
-    }
-
-    private void onTtsDone() {
-        int globalOffset = pageOffsets.get(currentPage);
-        // 粗略：句子前几个字的 offset
-        if (currentSentences != null && sentenceIndex < currentSentences.length) {
-            globalOffset += currentSentences[sentenceIndex].length();
-        }
-
-        appPreferences.saveProgress(filePath, currentPage, sentenceIndex, globalOffset);
-        appPreferences.setLastPage(currentPage);
-        appPreferences.setLastSentence(sentenceIndex);;
-
-        appPreferences.saveCurrentPage(filePath, currentPage);
-         sentenceIndex++;
-        speakNextSentence();
-    }*/
 
     private void speakNextSentence() {
         if (currentSentences == null) return;
@@ -553,35 +508,6 @@ public class ReaderActivity extends AppCompatActivity {
         sentenceIndex++;
         speakNextSentence();
     }
-/*    private void onTtsDone() {
-        int globalOffset = pageOffsets.get(currentPage);
-        // 粗略：句子前几个字的 offset
-        if (currentSentences != null && sentenceIndex < currentSentences.length) {
-            globalOffset += currentSentences[sentenceIndex].length();
-        }
-
-        appPreferences.saveProgress(filePath, currentPage, sentenceIndex, globalOffset);
-        appPreferences.setLastPage(currentPage);
-        appPreferences.setLastSentence(sentenceIndex);;
-
-        appPreferences.saveCurrentPage(filePath, currentPage);
-        sentenceIndex++;
-        speakNextSentence();
-    }*/
-/*
-    private void onTtsDone() {
-        if (currentSentences != null && sentenceIndex < currentSentences.length) {
-            int globalOffset = pageOffsets.get(currentPage) + currentSentences[sentenceIndex].length();
-            appPreferences.saveProgress(filePath, currentPage, sentenceIndex, globalOffset);
-        }
-        appPreferences.setLastPage(currentPage);
-        appPreferences.setLastSentence(sentenceIndex);
-        appPreferences.saveCurrentPage(filePath, currentPage);
-        sentenceIndex++;
-        // 延迟进入下一句，避免递归冲突
-        new Handler(Looper.getMainLooper()).postDelayed(this::speakNextSentence, 80);
-    }
-*/
 
 
     private void highlightSentence(int index) {
