@@ -16,10 +16,15 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 
+import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
@@ -36,6 +41,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 
+import com.qeko.utils.AppPreferences;
 import com.qeko.utils.FileAdapter;
 import com.qeko.utils.FileItem;
 import com.qeko.utils.FileUtils;
@@ -43,6 +49,7 @@ import com.qeko.utils.ScanCacheManager;
 
 import java.io.File;
 import java.util.*;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends Activity {
     private static final int REQUEST_STORAGE_PERMISSION = 1001;
@@ -64,10 +71,11 @@ public class MainActivity extends Activity {
     private View panel;
     private RadioGroup timerGroup;
     private RadioGroup radioGroupTime;
-    private SharedPreferences sp;
+    private AppPreferences appPreferences;
     private LinearLayout confirmLayout;
     private CountDownTimer countDownTimer;
     private long selectedTimeMillis = 0;
+    private  EditText etSearch;
 /*    private RecyclerView rvImages;
     private Button btnSwitchView;
     private boolean isGrid = true; // 当前是否为网格视图*/
@@ -77,7 +85,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 //        setContentView(R.layout.activity_settime);
-
+        appPreferences = new AppPreferences(this);
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
@@ -91,6 +99,9 @@ public class MainActivity extends Activity {
         btnMusic = findViewById(R.id.btnMusic);
         btnVideo = findViewById(R.id.btnVideo);
 //        btnSetting = findViewById(R.id.btnSetting);
+
+        etSearch = findViewById(R.id.etSearch);
+        ImageButton btnClearSearch = findViewById(R.id.btnClearSearch);
 
         btnBooks.setOnClickListener(v -> switchCategory(new BookFileStrategy(), "BOOK_DIRS"));
         btnImages.setOnClickListener(v -> switchCategory(new ImageFileStrategy(), "IMAGE_DIRS"));
@@ -112,13 +123,46 @@ public class MainActivity extends Activity {
             @Override public void onSwiped(@NonNull RecyclerView.ViewHolder holder, int direction) {
                 int pos = holder.getAdapterPosition();
                 FileItem item = adapter.getItemAt(pos);
+
                 if (!item.isFolder()) {
                     File file = item.getFile();
-                    file.delete();
-//                    scanDocuments(); // 不要refresh
+                    file.delete();     // 删除文件（磁盘）
+
+                    adapter.removeItem(pos);   // 删除内存列表数据
                 }
             }
         }).attachToRecyclerView(recyclerView);
+
+
+        // 输入监听，实时搜索
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                adapter.filter(s.toString());
+            }
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void afterTextChanged(Editable s) {}
+        });
+
+// 清空按钮
+        btnClearSearch.setOnClickListener(v -> {
+            etSearch.setText("");
+            adapter.filter(""); // 清空搜索显示所有
+        });
+
+        // 隐藏输入面板（软键盘）
+        etSearch.setOnEditorActionListener((v, actionId, event) -> {
+            // 这里 actionDone 或 IME_ACTION_SEARCH 都可
+            hideKeyboard(v);
+            return true;
+        });
+
+// 点击其他区域也隐藏键盘
+        recyclerView.setOnTouchListener((v, event) -> {
+            hideKeyboard(v);
+            return false;
+        });
+
 
         Button btnScan = findViewById(R.id.btnScan);
         btnScan.setOnClickListener(v -> scanDocuments());
@@ -206,6 +250,15 @@ public class MainActivity extends Activity {
 
     }
 
+    private void hideKeyboard(View view) {
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
+        etSearch.clearFocus(); // 失去焦点
+    }
+
+
     private void startCountdown(long millis) {
         // 先取消已有计时器，防止重复
         cancelCountdown();
@@ -242,16 +295,24 @@ public class MainActivity extends Activity {
         tvCountdown.setTextColor(Color.BLACK);
     }
 
-    /** 辅助：把剩余毫秒数格式化并更新 UI（复用在开始和 onTick） */
     private void updateCountdownUi(long millisUntilFinished) {
-        long seconds = (millisUntilFinished + 999) / 1000; // 上取整为秒，避免显示 29.5s -> 29s 造成混乱
-        tvCountdown.setText("剩余时间：" + seconds + " 秒");
-        if (seconds <= 10) {
+        long totalSeconds = millisUntilFinished / 1000;
+        long minutes = totalSeconds / 60;
+        long seconds = totalSeconds % 60;
+
+        // 格式化显示为“剩余时间：mm分ss秒”
+        String timeStr = String.format(Locale.getDefault(), "剩余时间：%02d分%02d秒", minutes, seconds);
+        tvCountdown.setText(timeStr);
+
+        // 小于10秒时变红提醒
+        if (millisUntilFinished <= 10_000) {
             tvCountdown.setTextColor(Color.RED);
         } else {
             tvCountdown.setTextColor(Color.BLACK);
         }
     }
+
+
 
     private void startExitCountdown(int minutes) {
         if (exitRunnable != null) handler.removeCallbacks(exitRunnable);
@@ -328,6 +389,8 @@ public class MainActivity extends Activity {
         for (File file : files) {
             File parent = file.getParentFile();
             folderMap.computeIfAbsent(parent, k -> new ArrayList<>()).add(file);
+
+            startBackgroundExtractionDelayed(file);                 //是否可以在这抽取
         }
 
         displayItems.clear();
@@ -550,7 +613,7 @@ private        ArrayList<File> pdfList;
             } else if (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || name.endsWith(".bmp") || name.endsWith(".gif")) {
                 intent = new Intent(this, ImageViewerActivity.class);
             }
-
+        Log.d(TAG, "openFile: file.getAbsolutePath()="+file.getAbsolutePath());
             if (intent != null) {
                 intent.putExtra("filePath", file.getAbsolutePath());
                 startActivity(intent);
@@ -618,27 +681,90 @@ private        ArrayList<File> pdfList;
             }
         }
     }
-/*    public static ArrayList<File> scanPdfFiles(File dir) {
-        ArrayList<File> pdfFiles = new ArrayList<>();
-        if (dir == null || !dir.exists() || !dir.isDirectory()) {
-            return pdfFiles;
-        }
-        scanRecursive(dir, pdfFiles);
-        return pdfFiles;
+//    private final Handler handler = new Handler(Looper.getMainLooper());
+
+    private void startBackgroundExtractionDelayed(File file) {
+
+        // 延迟 10 秒后执行抽取任务
+        handler.postDelayed(() -> {
+
+            Executors.newSingleThreadExecutor().execute(() -> {
+
+                String path = file.getAbsolutePath();
+
+                if (path.toLowerCase().endsWith(".pdf")) {
+
+                    FileUtils.extractTextFromPdfIncrementalSafe(
+                            file,
+                            MainActivity.this,
+                            appPreferences,
+                            path
+                    );
+
+                } else if (path.toLowerCase().endsWith(".epub")) {
+
+                    String textFilePath = path + ".epubtxt";
+
+                    FileUtils.extractEpubIncrementalSafe(
+                            file,
+                            new File(textFilePath),
+                            MainActivity.this,
+                            appPreferences,
+                            path
+                    );
+                }
+
+            });
+
+        }, 10_000); // ← 延迟 10 秒执行
     }
 
-    private static void scanRecursive(File folder, ArrayList<File> pdfFiles) {
-        File[] files = folder.listFiles();
-        if (files == null) return;
+/*
+    private void startBackgroundExtraction(String path) {
+        File file = new File(path);
+        if (!file.exists()) return;
 
-        for (File f : files) {
-            if (f.isDirectory()) {
-                scanRecursive(f, pdfFiles);  // 递归子目录
-            } else if (f.getName().toLowerCase().endsWith(".pdf")) {
-                pdfFiles.add(f);
+        new Thread(() -> {
+            try {
+                if (path.toLowerCase().endsWith(".pdf")) {
+                    FileUtils.extractTextFromPdfIncrementalSafe(file, this, appPreferences, path);
+                } else if (path.toLowerCase().endsWith(".epub")) {
+                    String textFilePath = path + ".epubtxt";
+                    FileUtils.extractEpubIncrementalSafe(file, new File(textFilePath), this, appPreferences, path);
+                }
+            } catch (Exception e) {
+                Log.e("MainActivity", "增量抽取失败: " + path, e);
             }
+        }).start();
+    }
+*/
+
+/*
+    private void startBackgroundExtraction(String path) {
+        File file = new File(path);
+        if (!file.exists()) return;
+        if (path.toLowerCase().endsWith(".pdf")) {
+            String textFilePath = path + ".pdftxt";
+            // 调用增量抽取
+            FileUtils.extractTextFromPdfIncrementalSafe(
+                    file,                   // PDF 文件
+                    this,                   // Context
+                    appPreferences,         // 管理增量进度
+                    path                    // keyBase
+            );
+        } else if (path.toLowerCase().endsWith(".epub")) {
+            String textFilePath = path + ".epubtxt";
+            FileUtils.extractEpubIncrementalSafe(
+                    file,                   // EPUB 文件
+                    new File(textFilePath), // 输出 txt 文件
+                    this,                   // Context
+                    appPreferences,         // 管理增量进度
+                    path                    // keyBase
+            );
         }
-    }*/
+    }
+
+*/
 
 
 

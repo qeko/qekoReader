@@ -1,354 +1,935 @@
 package com.qeko.reader;
 
-import static android.content.ContentValues.TAG;
+import static java.lang.Thread.sleep;
 
-import android.app.Dialog;
 import android.graphics.Color;
-import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.speech.tts.TextToSpeech;
 import android.text.Layout;
-import android.text.SpannableStringBuilder;
-import android.text.Spanned;
-import android.text.TextPaint;
-import android.text.style.ForegroundColorSpan;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.style.BackgroundColorSpan;
 import android.util.Log;
-import android.view.LayoutInflater;
+import android.util.TypedValue;
 import android.view.MotionEvent;
-import android.text.StaticLayout;
 import android.view.View;
+import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.preference.PreferenceManager;
 
 import com.qeko.tts.TextToSpeechManager;
 import com.qeko.utils.AppPreferences;
 import com.qeko.utils.FileUtils;
 
 import org.mozilla.universalchardet.UniversalDetector;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class ReaderActivity extends AppCompatActivity {
-    private static final Logger log = LoggerFactory.getLogger(ReaderActivity.class);
-    public AppPreferences appPreferences;
-    public TextView textView;
-    private Button btnTTS;
-    private SeekBar seekBar;
+
+    private static final String TAG = "ReaderActivity";
+    private String filePath;
+//    private static final String CACHE_FILE = "page_offsets.dat";
+
+    private TextView textView;
     private TextView pageInfo;
+    private Button btnTTS;
+    private SeekBar pageSeekBar;
+
+
+    private File file;
+    private Charset charset;
+
     public TextToSpeechManager ttsManager;
-    private ControlActivity controlActivity;
-    //    public  boolean changeFontSize = false;
-    private boolean isSimplified = true;
 
-    public List<Integer> pageOffsets = new ArrayList<>();
-    private List<Integer> pageOffsetsTemp = new ArrayList<>();
-    public int currentPage = 0, totalPages = 0;
+    private ReaderSettingsManager settingsManager;
+    public AppPreferences appPreferences;
+
+    private PageSplitter splitter;
+
+    private List<Long> pageOffsetList = new ArrayList<>();
+    private int currentPage = 1;        // 1-based page index for UI
+    private long currentStartByte = 0;  // 当前页面起始字节
     private String[] currentSentences;
-    private int sentenceIndex = 0;
-    private boolean isSpeaking = false;
-
-    private float speechRate;
-    private float fontSize;
-
-    private boolean isInitialLoad = true;
-    public String filePath;
-    private Dialog loadingDialog;
-    private static final String FONT_PATH = "fonts/SimsunExtG.ttf";
-//    private int lastPage;         ////////////////////////////////////////////////////////
-//    private int lastSentence;  ////////////////////////////////////////////////////////
-    private float lineSpacingMultiplier = 1.5f; // 示例值，也可以存储为用户偏好
-    private boolean runPageOffsets = false;
+    private int currentSentenceIndex = 0;
+    private LinearLayout settingsPanel;
+    private Handler mainHandler;
+    private Window window = getWindow();
+    private volatile boolean isPaging = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_reader);
-        appPreferences = new AppPreferences(this);
-        textView = findViewById(R.id.textContent);
-        btnTTS = findViewById(R.id.btnTTS);
-        seekBar = findViewById(R.id.pageSeekBar);
+
+        textView = findViewById(R.id.textView);
+        pageSeekBar = findViewById(R.id.pageSeekBar);
         pageInfo = findViewById(R.id.pageInfo);
-
-        speechRate = appPreferences.getSpeechRate();
-        fontSize = appPreferences.getFontSize();
-
-        totalPages = appPreferences.getTotalPages();
-
-        controlActivity = new ControlActivity(findViewById(R.id.controlPanel), this);
-        textView.setTextSize(fontSize);
-//
-        textView.setLineSpacing(1.9f, lineSpacingMultiplier);
-
+        btnTTS = findViewById(R.id.btnTTS);
+        settingsPanel = findViewById(R.id.settingsPanel);
         filePath = getIntent().getStringExtra("filePath");
-        currentPage = appPreferences.getCurrentPage(filePath);
-        restoreUserSettings();
-        loadText(filePath);
-        InitialLoad();
+        file = new File(filePath);
+
+        ttsManager = new TextToSpeechManager(this, this::onTtsDone);
+        settingsManager = new ReaderSettingsManager(this);
+        settingsManager.initViews();
+
+//        TextView tvFont = findViewById(R.id.tvFontSizeValue);
+//        TextView tvLine = findViewById(R.id.tvLineSpacingValue);
+//        TextView tvSpeed = findViewById(R.id.tvSpeechRateValue);
+//        TextView tvBright = findViewById(R.id.tvBrightnessValue);
+        // 按钮示例
+
+
+//       settingsManager = ReaderSettingsManager.getInstance(this,textView);
+        // 读取 TXT 成功后，再调用
+//        settingsManager.applyAllSettings(this, textView);
+
+        setupSettingButtons();
+
+        appPreferences = new AppPreferences(this);
+        ttsManager.setSpeed(appPreferences.getSpeechRate());
+
+        mainHandler = new Handler(Looper.getMainLooper());
+        openBook(file);
+        restoreReaderSettings();
+
+        findViewById(R.id.btnToggleInvert).setOnClickListener(v -> {
+            toggleInvertMode();
+        });
+
+        findViewById(R.id.btnApplySettings).setOnClickListener(v -> {
+
+            // 1. 保存所有设置（已实时保存，这里只补充必要处理）
+            float brightness = appPreferences.getBrightness();
+            settingsManager.changeBrightness(brightness);
+
+            // 3. 隐藏设置面板
+            settingsPanel.setVisibility(View.GONE);
+        });
+
+//        initSettingsPanel();
+    }
+
+    private void setupSettingButtons() {
+        findViewById(R.id.btnIncreaseFontSize).setOnClickListener(v -> {
+            settingsManager.changeFontSize(+1f);
+
+            float sp = textView.getTextSize() / getResources().getDisplayMetrics().scaledDensity + 1f;
+            if (sp < 8f) sp = 8f;
+            textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
+            appPreferences.saveTextSizeSp(sp);
+
+        });
+        findViewById(R.id.btnDecreaseFontSize).setOnClickListener(v -> {
+            settingsManager.changeFontSize(-1f);
+            float sp = textView.getTextSize() / getResources().getDisplayMetrics().scaledDensity - 1f;
+            if (sp < 8f) sp = 8f;
+            textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
+            appPreferences.saveTextSizeSp(sp);
+        });
+
+// 行距 + 按钮
+        findViewById(R.id.btnIncreaseLineSpacing).setOnClickListener(v -> {
+            settingsManager.changeLineSpacing(+0.1f);
+
+            float spacing = textView.getLineSpacingMultiplier() + 0.1f;
+            if (spacing < 1.0f) spacing = 1.0f;
+
+            textView.setLineSpacing(0f, spacing);
+            appPreferences.saveLineSpacing(spacing);
+
+
+        });
+
+
+// 行距 - 按钮
+        findViewById(R.id.btnDecreaseLineSpacing).setOnClickListener(v -> {
+            settingsManager.changeLineSpacing(-0.1f);
+
+            float spacing = textView.getLineSpacingMultiplier() - 0.1f;
+            if (spacing < 1.0f) spacing = 1.0f;
+
+            textView.setLineSpacing(0f, spacing);
+            appPreferences.saveLineSpacing(spacing);
+
+        });
+
+
+// 亮度 +
+        findViewById(R.id.btnIncreaseBrightness).setOnClickListener(v -> {
+
+            settingsManager.changeBrightness(+0.05f);
+
+            WindowManager.LayoutParams lp = window.getAttributes();
+            float b = lp.screenBrightness + 0.05f;
+            if (b > 1f) b = 1f;
+
+            lp.screenBrightness = b;
+            window.setAttributes(lp);
+
+            appPreferences.saveBrightness(b);
+
+        });
+
+// 亮度 -
+        findViewById(R.id.btnDecreaseBrightness).setOnClickListener(v -> {
+
+            settingsManager.changeBrightness(-0.05f);
+
+            WindowManager.LayoutParams lp = window.getAttributes();
+            float b = lp.screenBrightness - 0.05f;
+            if (b < 0.01f) b = 0.01f;
+
+            lp.screenBrightness = b;
+            window.setAttributes(lp);
+
+            appPreferences.saveBrightness(b);
+
+        });
+
+
+        // ========================
+//       语速 + 按钮
+// ========================
+        findViewById(R.id.btnIncreaseSpeed).setOnClickListener(v -> {
+
+            float oldRate = appPreferences.getSpeechRate();
+            float newRate = oldRate + 0.1f;
+
+            if (newRate > 2.0f) newRate = 2.0f;
+
+            // 更新设置管理器
+            settingsManager.changeSpeechRate(newRate - oldRate);
+
+            // 应用到 TTS
+            ttsManager.setSpeed(newRate);
+
+            // 保存
+            appPreferences.setSpeechRate(newRate);
+
+            Log.d("TTS", "Speed increased to: " + newRate);
+        });
+
+
+// ========================
+//       语速 - 按钮
+// ========================
+        findViewById(R.id.btnDecreaseSpeed).setOnClickListener(v -> {
+
+            float oldRate = appPreferences.getSpeechRate();
+            float newRate = oldRate - 0.1f;
+
+            if (newRate < 0.5f) newRate = 0.5f;
+
+            // 更新设置管理器
+            settingsManager.changeSpeechRate(newRate - oldRate);
+
+            // 应用到 TTS
+            ttsManager.setSpeed(newRate);
+
+            // 保存
+            appPreferences.setSpeechRate(newRate);
+
+            Log.d("TTS", "Speed decreased to: " + newRate);
+        });
+    }
+
+    public void toggleInvertMode() {
+        boolean enabled = !appPreferences.isInvertMode();
+        appPreferences.saveInvertMode(enabled);
+
+        if (enabled) {
+            textView.setBackgroundColor(Color.BLACK);
+            textView.setTextColor(Color.WHITE);
+        } else {
+            textView.setBackgroundColor(Color.WHITE);
+            textView.setTextColor(Color.BLACK);
+        }
+    }
+
+    public void applyBrightness(float value) {
+        // 保存
+        appPreferences.saveBrightness(value);
+
+        WindowManager.LayoutParams lp = window.getAttributes();
+        lp.screenBrightness = value;   // 0.0f~1.0f
+        window.setAttributes(lp);
+    }
+
+/*
+    private void setupSettingButtons() {
+
+        // 字体按钮
+//        settingsPanel.findViewById(R.id.btnFontSelect).setOnClickListener(v -> settingsManager.setFont());
+
+        // 字号
+        settingsPanel.findViewById(R.id.btnIncreaseFontSize).setOnClickListener(v -> settingsManager.increaseFontSize());
+        settingsPanel.findViewById(R.id.btnDecreaseFontSize).setOnClickListener(v -> settingsManager.decreaseFontSize());
+
+        // 行距
+        settingsPanel.findViewById(R.id.btnIncreaseLineSpacing).setOnClickListener(v -> settingsManager.increaseLineSpacing());
+        settingsPanel.findViewById(R.id.btnDecreaseLineSpacing).setOnClickListener(v -> settingsManager.decreaseLineSpacing());
+
+        // 语速
+        settingsPanel.findViewById(R.id.btnIncreaseSpeed).setOnClickListener(v -> {settingsManager.increaseSpeed();     updateTtsSpeed(this.appPreferences.getSpeechRate());});
+        settingsPanel.findViewById(R.id.btnDecreaseSpeed).setOnClickListener(v -> {settingsManager.decreaseSpeed();     updateTtsSpeed(this.appPreferences.getSpeechRate());});
+
+        // 亮度
+        settingsPanel.findViewById(R.id.btnIncreaseBrightness).setOnClickListener(v -> settingsManager.increaseBrightness(this));
+        settingsPanel.findViewById(R.id.btnDecreaseBrightness).setOnClickListener(v -> settingsManager.decreaseBrightness(this));
+        // 反白
+        settingsPanel.findViewById(R.id.btnToggleInvert).setOnClickListener(v -> settingsManager.toggleInvert());
+
+        // 确定 → 重新分页
+        settingsPanel.findViewById(R.id.btnApplySettings).setOnClickListener(v -> {
+       //更新语速
+//       updateTtsSpeed(this.appPreferences.getSpeechRate());
+
+
+            settingsPanel.setVisibility(View.GONE);
+        });
+
+
+    }
+*/
+
+
+/*
+    private void initSettingsPanel() {
+
+
+
+        TextView tvFont = findViewById(R.id.tvFontSizeValue);
+        TextView tvLine = findViewById(R.id.tvLineSpacingValue);
+        TextView tvSpeed = findViewById(R.id.tvSpeechRateValue);
+        TextView tvBright = findViewById(R.id.tvBrightnessValue);
+
+        // 初始化 UI 显示
+*/
+/*
+        tvFont.setText(String.valueOf(settings.getFontSize()));
+        tvLine.setText(String.format("%.1f", settings.getLineSpacing()));
+        tvSpeed.setText(String.format("%.1f", settings.getTtsSpeed()));
+        tvBright.setText(String.valueOf(settings.getBrightness()));
+*//*
+
+
+        // 监听设置变化，实时更新 UI
+        settingsManager.setOnSettingChangeListener((key, value) -> {
+            runOnUiThread(() -> {
+                switch (key) {
+                    case "fontSize": tvFont.setText(String.valueOf((int) value)); break;
+                    case "lineSpacing": tvLine.setText(String.format("%.1f", value)); break;
+                    case "ttsSpeed": tvSpeed.setText(String.format("%.1f", value)); break;
+                    case "brightness": tvBright.setText(String.valueOf((int) value)); break;
+                }
+            });
+        });
+
+*/
+/*        // 按钮
+        findViewById(R.id.btnIncreaseFont).setOnClickListener(v -> settings.increaseFontSize());
+        findViewById(R.id.btnDecreaseFont).setOnClickListener(v -> settings.decreaseFontSize());
+
+        findViewById(R.id.btnIncreaseLineSpacing).setOnClickListener(v -> settings.increaseLineSpacing());
+        findViewById(R.id.btnDecreaseLineSpacing).setOnClickListener(v -> settings.decreaseLineSpacing());
+
+        findViewById(R.id.btnIncreaseSpeed).setOnClickListener(v -> settings.increaseSpeed());
+        findViewById(R.id.btnDecreaseSpeed).setOnClickListener(v -> settings.decreaseSpeed());
+
+        findViewById(R.id.btnIncreaseBrightness).setOnClickListener(v -> settings.increaseBrightness());
+        findViewById(R.id.btnDecreaseBrightness).setOnClickListener(v -> settings.decreaseBrightness());*//*
+
+    }
+*/
+
+
+
+    private void updateTtsSpeed(float speed) {
+        if (ttsManager != null) {
+            ttsManager.setSpeed(speed);
+        }
+    }
+
+    // ========== 抽取完成后初始化分页和显示 ==========
+    private void initAfterTextExtraction(File textFile) {
+        this.file = textFile;
+
+        // 检测编码
+        charset = detectEncoding(file);
+        if (charset == null) charset = StandardCharsets.UTF_8;
+
+        // 尝试加载缓存偏移表
+        pageOffsetList = loadPageOffsets();
+
+        // （如果缓存为空或者需要重新分页）
+        startPaginationIfNeeded();
+
+        // 显示第一页
+        if (pageOffsetList.size() >= 1) {
+            showPage(0);
+        }
+
         setupSeekBar();
         setupTouchControl();
+
         btnTTS.setOnClickListener(v -> toggleSpeaking());
+
+        restoreProgressIfAny();
     }
 
+    public void openBook(File originalFile) {
+        if (originalFile == null || !originalFile.exists()) return;
 
-    private void InitialLoad(){
-        // 优先加载缓存
-        Log.d(TAG, "InitialLoad: "+filePath);
-        pageOffsetsTemp = FileUtils.loadPageOffsets(this, filePath+"temp");
-        pageOffsets = FileUtils.loadPageOffsets(this, filePath);
+        String path = originalFile.getAbsolutePath();
+        File textFile;
 
-        if (pageOffsetsTemp == null) {
-            pageOffsetsTemp = new ArrayList<>();
-        }
-        if (pageOffsets == null) {
-            pageOffsets = new ArrayList<>();
-        }
+        if (path.toLowerCase().endsWith(".pdf")) {
+            textFile = new File(path + ".pdftxt");
 
-        if (!pageOffsets.isEmpty() && pageOffsets.size() > 0) {
-            runPageOffsets = true;
-            Log.d(TAG, "onCreate: 有缓存 "+ pageOffsets.size());
-            //        pageOffsets = buildPageOffsets(filePath);   //测试时用
-            totalPages = Math.max(1, pageOffsets.size() - 1);
-            //              dismissLoadingDialog();
-            Log.d(TAG, "InitialLoad: loadPage 1");
-            loadPage(pageOffsets,currentPage);
+            // 如果文本还没生成，可触发后台抽取（增量安全）
+            if (!textFile.exists()) {
+                textView.setText("首次打开要一些时间，请耐心等待...");
+                FileUtils.extractTextFromPdfIncrementalSafe(originalFile, this, appPreferences, path);
+                return; // 等待后台抽取完成后再打开
+            }
+
+        } else if (path.toLowerCase().endsWith(".epub")) {
+            textFile = new File(path + ".epubtxt");
+
+            // 如果文本还没生成，可触发后台抽取（增量安全）
+            if (!textFile.exists()) {
+                textView.setText("首次打开要一些时间，请耐心等待...");
+                FileUtils.extractEpubIncrementalSafe(originalFile, textFile, this, appPreferences, path);
+                return; // 等待后台抽取完成后再打开
+            }
+
         } else {
-            runPageOffsets = false;
-            Log.d(TAG, "onCreate: 无缓存 ");
-            pageOffsetsTemp.clear();      //清空pageOffsetsTemp
-//               pageOffsetsTemp.add(0);  //待确认
-            // 无缓存 -> 重新分页
-            Log.w(TAG, pageOffsetsTemp.isEmpty()+" buildPageOffsetsWithCache "+ pageOffsetsTemp.size());
-            if (pageOffsetsTemp.isEmpty() && pageOffsetsTemp.size()== 0) {  //双无
-                Log.d(TAG, "pageOffsetsTemp无  ");
-                textView.post(() -> {
-                    new Thread(() -> {
-                        Log.w(TAG, "buildPageOffsetsWithCache true");
-                        pageOffsetsTemp = buildPageOffsetsWithCache(filePath, true);
-                        runOnUiThread(() -> {
-                            Log.d(TAG, "InitialLoad: loadPage 2");
-                            loadPage(pageOffsetsTemp, 0); // 立即显示临时分页第一页
-                        });
-                    }).start();
+            // 其他文本文件直接使用
+            textFile = originalFile;
+        }
+
+        // 文本文件已存在，初始化 ReaderActivity
+        initAfterTextExtraction(textFile);
+    }
+
+
+    // ========== 分页启动（后台） ==========
+    private void startPaginationIfNeeded() {
+        if (isPaging) return;
+
+//        boolean needPaging = (pageOffsetList.size() <= 1) || controlActivity.isForceRebuildPages();
+        boolean needPaging = (pageOffsetList.size() <= 1);
+        if (!needPaging) return;
+
+        isPaging = true;
+        Toast.makeText(this, "请稍候...", Toast.LENGTH_SHORT).show();
+
+        textView.post(() -> {
+            splitter = new PageSplitter(file, textView);
+            updatePagingParams(); // 🔥 同步最新字体/行距/宽高
+
+            new Thread(() -> {
+                try {
+                    splitter.buildPageOffsets();
+                    List<Long> newList = splitter.pageOffsetList;
+
+                    mainHandler.post(() -> {
+                        if (newList != null && newList.size() > 1) {
+                            pageOffsetList = new ArrayList<>(newList);
+                            savePageOffsets(pageOffsetList);
+
+                            int newPageIndex = findPageByOffset(pageOffsetList, currentStartByte);
+                            showPage(newPageIndex);
+                        }
+                        isPaging = false;
+                    });
+                } catch (Exception e) {
+                    Log.e(TAG, "分页异常", e);
+                    mainHandler.post(() -> {
+                        Toast.makeText(this, "分页失败", Toast.LENGTH_SHORT).show();
+                        isPaging = false;
+                    });
+                }
+            }).start();
+        });
+    }
+
+
+
+    private void extractRemainingPagesInBackground(File pdfFile, File outFile, int startPage) {
+        FileUtils.extractTextFromPdfIncremental(pdfFile, outFile, this, "fonts/SimsunExtG.ttf", startPage, Integer.MAX_VALUE,
+                new FileUtils.ExtractProgressCallback() {
+                    @Override
+                    public void onProgress(int progress) {
+                        // 后台抽取进度不用显示，直接打印日志可选
+                        Log.d(TAG, "处理中: " + progress + "%");
+                    }
+
+                    @Override
+                    public void onDone() {
+                        Log.d(TAG, "全部处理取完成");
+                        // 可选择重新分页或刷新分页缓存
+                        rebuildPaginationAndRestore();
+                    }
                 });
-            }
-            totalPages = Math.max(1, pageOffsets.size() - 1);
-//                    dismissLoadingDialog();
-//                    loadPage(currentPage);
-//        loadPage(pageOffsetsTemp != null && !pageOffsetsTemp.isEmpty() ? pageOffsetsTemp : pageOffsets, currentPage);
-            Log.d(TAG, "InitialLoad: loadPage 3");
-            runPageOffsets = true;
-            loadPage( pageOffsets, currentPage);
-        }
-
-    }
-
-    private int pageCharCount = 2000; // 默认值
-    private int textLength = 0;
-
-    public List<Integer> buildPageOffsetsWithCache(String filePath,boolean isNewPageOffers) {
-        Log.w(TAG, " buildPageOffsetsWithCache isNewPageOffers "+filePath);
-        Log.w(TAG, " buildPageOffsetsWithCache isNewPageOffers "+isNewPageOffers);
-
-        List<Integer> thisPageOffsets = new ArrayList<>();
-        // 先读取缓存
-        textLength = appPreferences.getTextLength(filePath);
-        pageCharCount = appPreferences.getPageCharCount(filePath);
-       currentPage   = appPreferences.getCurrentPage(filePath);
-        sentenceIndex = appPreferences.getSentenceIndex(filePath);
-
-        // 如果缓存不存在，则重新估算 pageCharCount 和 textLength
-        Log.w(TAG, "  textLength "+textLength);
-        Log.w(TAG, "  pageCharCount "+pageCharCount);
-        int viewWidth = 0;
-        int viewHeight = 0;
-        if (textLength <= 0 || pageCharCount <= 0) {
-            Log.w(TAG, "TextLength/PageCharCount 无缓存，重新计算");
-
-            viewWidth = textView.getWidth() - textView.getPaddingLeft() - textView.getPaddingRight();
-            viewHeight = textView.getHeight() - textView.getPaddingTop() - textView.getPaddingBottom();
-
-            if (viewWidth <= 0 || viewHeight <= 0) {
-                Log.w(TAG, "TextView 宽高无效，无法估算分页字符数");
-                return null;
-            }
-            // 先读取总长度
-//            textLength = safeGetTextLength(filePath);
-            textLength = getRealTextLength(filePath);
-            appPreferences.saveTextLength(filePath,textLength);
-
-            // 模拟一段文本来估算每页字符数
-            TextPaint textPaint = textView.getPaint();
-            String sampleText = "这是用于测量的示例文字。";
-            StaticLayout layout = StaticLayout.Builder.obtain(sampleText, 0, sampleText.length(), textPaint, viewWidth)
-                    .setAlignment(Layout.Alignment.ALIGN_NORMAL)
-                    .build();
-
-            int lineHeight = layout.getLineBottom(0) - layout.getLineTop(0);
-            int linesPerPage = viewHeight / lineHeight;
-            int charsPerLine = 20; // 简单估算
-            pageCharCount = Math.max(100, linesPerPage * charsPerLine);
-            appPreferences.savePageCharCount(filePath,pageCharCount);
-
-            Log.d(TAG, "重新计算分页: textLength=" + textLength + ", pageCharCount=" + pageCharCount);
-        }
-
-        // 开始分页
-        thisPageOffsets.clear();
-        thisPageOffsets.add(0);
-        TextPaint paint = textView.getPaint();
-        viewWidth = textView.getWidth() - textView.getPaddingLeft() - textView.getPaddingRight();
-        viewHeight = textView.getHeight() - textView.getPaddingTop() - textView.getPaddingBottom() - 720;
-
-        int start = 0;
-        while (start < textLength) {
-            int low = start + 1;
-            int high = Math.min(textLength, start + pageCharCount * 2); // 上限两页
-            int fitPos = start + 1;
-
-            while (low <= high) {
-                int mid = (low + high) / 2;
-                String sub = readTextSegment(filePath, start, mid);
-                StaticLayout layout = StaticLayout.Builder.obtain(sub, 0, sub.length(), paint, viewWidth)
-                        .setLineSpacing(0f, 1.2f).setIncludePad(false).build();
-                if (layout.getHeight() <= viewHeight) {
-                    fitPos = mid;
-                    low = mid + 1;
-                } else {
-                    high = mid - 1;
-                }
-            }
-
-            if (fitPos <= start) break;
-            thisPageOffsets.add(fitPos);
-
-//            Log.w(TAG, "buildPageOffsetsWithCache"+ thisPageOffsets.size());
-            // 克隆临时分页(边生成边显示)
-            if (isNewPageOffers && thisPageOffsets.size() >= 30 ) {
-                Log.d(TAG, "pageOffsetsTemp > 30");
-
-                totalPages = thisPageOffsets.size() - 1;
-                seekBar.setMax(Math.max(totalPages, 1));
-                FileUtils.savePageOffsets(this, filePath+"temp", thisPageOffsets);
-                return  thisPageOffsets;
-            }
-            start = fitPos;
-        }
-
-        totalPages = thisPageOffsets.size() - 1;
-        seekBar.setMax(Math.max(totalPages, 1));
-        FileUtils.savePageOffsets(this, filePath, thisPageOffsets);
-        Log.d(TAG,  "PageOffsets="+thisPageOffsets.size());
-        return thisPageOffsets;
     }
 
 
-    private void restoreUserSettings() {
-        speechRate  = appPreferences.getSpeechRate();
-        Log.d(TAG,  "speechRate="+speechRate);
+    // ========== 加载并显示页（0-based 页索引） ==========
+    private void showPage(int pageIndex0) {
+        if (pageOffsetList == null || pageOffsetList.size() == 0) return;
 
-        fontSize = appPreferences.getFontSize();
-        textView.setTextSize(fontSize);
+        // pageIndex0 范围：0 .. size()-2 （因为最后一项为文件尾）
+        if (pageIndex0 < 0) pageIndex0 = 1;
+        if (pageIndex0 >= pageOffsetList.size() - 1) pageIndex0 = pageOffsetList.size() - 2;
+//        Log.d(TAG, "showPage: pageIndex0 "+pageIndex0);
+//        Log.d(TAG, "showPage: pageOffsetList.size "+pageOffsetList.size());
+        long start = pageOffsetList.get(pageIndex0);
+        long end = pageOffsetList.size() > pageIndex0 + 1 ? pageOffsetList.get(pageIndex0 + 1) : file.length();
 
-        updateTheme(appPreferences.isDarkTheme());
-        setFont(appPreferences.getFontName());
+        // 读取并显示
+        String text = loadTextFromTo(start, end);
+        displayPageTextAndPrepareTTS(text);
 
-        // ✅ 只恢复 currentPage 和 sentenceIndex
-        currentPage   = appPreferences.getCurrentPage(filePath);
-        sentenceIndex = appPreferences.getSentenceIndex(filePath);
+        // 更新状态
+        currentPage = pageIndex0 + 1; // UI 上用 1-based
+        currentStartByte = start;
 
-/*        lastPage = appPreferences.getLastPage();
-        lastSentence = appPreferences.getLastSentence();
-
-        currentPage = lastPage;
-        sentenceIndex = lastSentence;*/
+        // update UI
+        pageSeekBar.setMax(Math.max(1, pageOffsetList.size() - 1));
+        pageSeekBar.setProgress(currentPage);
+        pageInfo.setText(currentPage + " / " + Math.max(1, pageOffsetList.size() - 1));
     }
 
-    private boolean taskCompleted = false; // 任务完成状态
-
-    private void loadText(String path) {
-        try {
-            File file = new File(path);
-            String textFilePath;
-
-            if (path.toLowerCase().endsWith(".pdf")) {
-                textFilePath = path + ".pdftxt";
-                if (!new File(textFilePath).exists()) {
-                    textView.setText("首次打开要一些时间，请耐心等待或待会再来，如果看到乱码请退出再试一次");
-                    FileUtils.extractTextFromPdf(file, this, "fonts/SimsunExtG.ttf");
-                    return;
-                }
-            } else if (path.toLowerCase().endsWith(".epub")) {
-                textFilePath = path + ".epubtxt";
-                if (!new File(textFilePath).exists()) {
-
-                    textView.setText("首次打开要一些时间，请耐心等待或待会再来，如果看到乱码请退出再试一次");
-                    FileUtils.extractTextFromEpubByBatch(this, file, new File(textFilePath));
-                    return;
-                }
-            } else {
-                textFilePath = path;
-            }
-
-            // ✅ 统一走文本读取逻辑
-            filePath = textFilePath;
-//            fullText = readFileToString(new File(filePath));
-            // 重新计算 textLength / pageCharCount
-//            textLength = fullText.length();
-//            textLength = safeGetTextLength(filePath);
-            textLength = getRealTextLength(filePath);
-            pageCharCount = appPreferences.getPageCharCount(filePath);
-
-            // ✅ 恢复进度
-            currentPage   = appPreferences.getCurrentPage(filePath);
-            sentenceIndex = appPreferences.getSentenceIndex(filePath);
-/*            currentPage = lastPage;
-            sentenceIndex = lastSentence;*/
-
+    // 根据字节范围读取文本（安全）
+    private String loadTextFromTo(long start, long end) {
+        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+            if (start < 0) start = 0;
+            if (end > raf.length()) end = raf.length();
+            int len = (int) (end - start);
+            if (len <= 0) return "";
+            byte[] buf = new byte[len];
+            raf.seek(start);
+            raf.readFully(buf);
+            return new String(buf, charset);
         } catch (Exception e) {
-            Log.d(TAG, "loadText: 读取失败");
-//            Toast.makeText(this, "读取失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-//            fullText = "";
+            Log.e(TAG, "loadTextFromTo error", e);
+            return "";
         }
     }
 
+    // 将文本放入 textView 并准备分句/TTS
+    private void displayPageTextAndPrepareTTS(String text) {
+        textView.setText(text);
+        textView.scrollTo(0, 0);
 
-    private int getRealTextLength(String  filePath) {
-        File file = new File(filePath);
-        Charset charset = detectEncoding(file);
-        int length = 0;
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), charset))) {
-            while (reader.read() != -1) {
-                length++;
+        currentSentenceIndex = 0; // 每次新页从0开始，可在恢复进度时重设
+
+        textView.post(() -> {
+            Layout layout = textView.getLayout();
+            if (layout == null) return;
+
+            int lastVisibleLine = layout.getLineCount() - 1;
+            if (lastVisibleLine < 0) lastVisibleLine = 0;
+            int visibleEnd = layout.getLineEnd(lastVisibleLine);
+            String visibleText = text.substring(0, Math.min(visibleEnd, text.length()));
+
+            // 公用正则
+            currentSentences = splitSentences(visibleText);
+
+            if (currentSentenceIndex < 0) currentSentenceIndex = 0;
+            if (currentSentenceIndex >= currentSentences.length) currentSentenceIndex = 0;
+
+            // 🔥 分句完成后立即开始朗读
+            speakNextSentence();
+        });
+    }
+
+
+    // 翻页触控（保留）
+    private void setupTouchControl() {
+        textView.setOnTouchListener((v, e) -> {
+            if (e.getAction() == MotionEvent.ACTION_DOWN) {
+                float x = e.getX();
+                float width = textView.getWidth();
+                if (x > width * 2 / 3f) nextPage();
+                else if (x < width / 3f) prevPage();
+                else toggleSettingsPanel();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return length;
+            return true;
+        });
     }
 
+    // loadPage API（1-based page）
+    private void loadPage(int page) {
+        if (page <= 0) return;
+
+        // 当 page 大于已生成的最大页时，若正在分页则提示；否则限制到最后页
+        int generatedPages = Math.max(0, pageOffsetList.size() - 1);
+        if (page > generatedPages) {
+            if (isPaging) {
+                Toast.makeText(this, "正在分页，暂不可跳转到该页", Toast.LENGTH_SHORT).show();
+                return;
+            } else {
+                page = generatedPages;
+            }
+        }
+
+
+        int pageIndex0 = page - 1;
+        showPage(pageIndex0);
+    }
+
+    private void nextPage() {
+        if (currentPage < Math.max(1, pageOffsetList.size() - 1)) {
+            loadPage(currentPage + 1);
+        } else {
+            if (isPaging)
+                Toast.makeText(this, "正在分页，已显示最后已生成页", Toast.LENGTH_SHORT).show();
+            else Toast.makeText(this, "已是最后一页", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void prevPage() {
+        if (currentPage > 1) loadPage(currentPage - 1);
+    }
+
+    // ========== SeekBar =============
+    private void setupSeekBar() {
+        pageSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser) {
+                    loadPage(progress);
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+        });
+    }
+
+    // ========== TTS 逐句相关 ==========
+    private void speakNextSentence() {
+//        Log.d(TAG, "speakNextSentence: ");
+        if (currentSentences == null || currentSentenceIndex >= currentSentences.length) return;
+        highlightSentence(currentSentences[currentSentenceIndex]);
+        ttsManager.speak(currentSentences[currentSentenceIndex]);
+    }
+
+    private void onTtsDone() {
+
+        if (currentSentences == null || currentSentences.length == 0) {
+            return;
+        }
+
+        // 当前页还有下一句 → 继续读下一句
+        if (currentSentenceIndex < currentSentences.length - 1) {
+
+            currentSentenceIndex++;
+
+            // 保存进度
+            appPreferences.saveProgress(
+                    filePath,
+                    currentStartByte,        // byte offset
+                    currentSentenceIndex,    // sentence index
+                    currentPage              // page index
+            );
+
+            speakNextSentence();
+            return;
+        }
+
+        // 页内句子读完了
+        // ==============================
+        //       页内已读完 → 翻页
+        // ==============================
+        if (currentPage < pageOffsetList.size() - 1) {
+
+            int nextPage = currentPage + 1;
+
+            // 保存进度：下一页，从句0开始
+            appPreferences.saveProgress(
+                    filePath,
+                    pageOffsetList.get(nextPage),
+                    0,
+                    nextPage
+            );
+
+/*            appPreferences.saveProgress(
+                    filePath,
+                    currentStartByte,        // byte offset
+                    currentSentenceIndex,    // sentence index
+                    currentPage              // page index
+            );*/
+
+            // loadPage() 内会显示页面 → displayPageTextAndPrepareTTS()
+            // → 分句完成后会自动调用 speakNextSentence()
+            loadPage(nextPage);
+
+            return;
+        }
+
+        // ==============================
+        //       已到最后一页
+        // ==============================
+        if (isPaging) {
+            Toast.makeText(this, "分页中，稍后继续朗读", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "朗读完成", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private String[] splitSentences(String text) {
+        if (text == null || text.isEmpty()) return new String[]{""};
+        return text.split("(?<=[。． ，, ！!？?])");
+
+    }
+
+
+    private void highlightSentence(String sentence) {
+        CharSequence current = textView.getText();
+        if (current == null) return;
+        SpannableString spannable = new SpannableString(current);
+        int start = current.toString().indexOf(sentence);
+        if (start >= 0) {
+            int end = start + sentence.length();
+            spannable.setSpan(new BackgroundColorSpan(0xFFFFFF00), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            textView.setText(spannable);
+        }
+    }
+
+    private void toggleSpeaking() {
+        if (ttsManager.isSpeaking()) {
+            ttsManager.stop();
+            btnTTS.setText("🔇");
+        } else {
+//            controlActivity.hide();
+            btnTTS.setText("🎧");
+            // 先确保 currentSentences 已准备
+            if (currentSentences == null || currentSentences.length == 0) {
+                // 重新准备当前页
+                showPage(currentPage - 1);
+            }
+            // 读取 appPreferences 中保存的句子索引（如果打开时恢复）
+            speakNextSentence();
+        }
+    }
+
+    // ========== 保存/加载分页缓存 ==========
+    private void savePageOffsets(List<Long> list) {
+        try (ObjectOutputStream oos = new ObjectOutputStream(openFileOutput(getCacheFileName(), MODE_PRIVATE))) {
+            oos.writeObject(list);
+            Log.i(TAG, "已保存分页缓存，共 " + Math.max(0, list.size() - 1) + " 页");
+        } catch (Exception e) {
+            Log.e(TAG, "保存分页缓存失败", e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Long> loadPageOffsets() {
+        try (ObjectInputStream ois = new ObjectInputStream(openFileInput(getCacheFileName()))) {
+            List<Long> list = (List<Long>) ois.readObject();
+            // basic validation
+            if (list != null && list.size() > 1) {
+                Log.i(TAG, "加载到分页缓存，共 " + (list.size() - 1) + " 页");
+                return list;
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return new ArrayList<>();
+    }
+
+    // ========== 保存/恢复阅读进度 ==========
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // 保存进度：当前页起始字节 & 当前句索引 & 当前页
+        appPreferences.saveProgress(
+                filePath,
+                currentStartByte,        // byte offset
+                currentSentenceIndex,    // sentence index
+                currentPage              // page index
+        );
+    }
+
+    private void restoreProgressIfAny() {
+        Log.d(TAG, "restoreProgressIfAny: "+filePath);
+        long savedOffset = appPreferences.getSavedOffset(filePath);
+        int savedSentenceIndex = appPreferences.getSavedSentenceIndex(filePath);
+        int savedPage = appPreferences.getSavedPage(filePath);
+
+
+        if (savedOffset > 0) {
+            // 如果分页列表已经生成，直接定位；否则在分页完成后会自动 restore
+            if (pageOffsetList != null && pageOffsetList.size() > 1) {
+                int pageIdx = findPageByOffset(pageOffsetList, savedOffset);
+                currentSentenceIndex = savedSentenceIndex;
+                showPage(pageIdx);
+            } else {
+                // 分页未完成时：先保留 currentStartByte, sentenceIndex。 当分页完成后 startPagination 回调会定位
+                currentStartByte = savedOffset;
+                currentSentenceIndex = savedSentenceIndex;
+                currentPage = Math.max(1, savedPage);
+            }
+        }
+
+
+    }
+
+    // 找到包含 offset 的 page 索引（0-based）
+    private int findPageByOffset(List<Long> list, long offset) {
+        if (list == null || list.size() <= 1) return 0;
+        for (int i = 0; i < list.size() - 1; i++) {
+            long s = list.get(i);
+            long e = list.get(i + 1);
+            if (offset >= s && offset < e) return i;
+        }
+        return list.size() - 2;
+    }
+
+
+    // 保留当前位置（currentStartByte）, 重新分页后用 findPageByOffset 定位
+    public void rebuildPaginationAndRestore() {
+        if (isPaging) return;
+        isPaging = true;
+
+        long savedOffset = currentStartByte;
+        int savedSentence = currentSentenceIndex;
+        int savedPage = currentPage;
+
+        Toast.makeText(this, "正在重新分页，请稍候...", Toast.LENGTH_SHORT).show();
+
+        textView.post(() -> {
+            splitter = new PageSplitter(file, textView);
+
+            // 🔥 设置最新字体和行距
+            splitter.setTextSize(textView.getTextSize());
+            splitter.setLineSpacingMultiplier(currentLineSpacing);
+            splitter.setPageWidth(textView.getWidth()); //- textView.getPaddingLeft() - textView.getPaddingRight()
+            splitter.setPageHeight(textView.getHeight() - textView.getPaddingTop() - 18 * textView.getPaddingBottom());
+
+
+            new Thread(() -> {
+                try {
+                    splitter.buildPageOffsets();
+                    List<Long> newList = splitter.pageOffsetList;
+
+                    mainHandler.post(() -> {
+                        if (newList != null && newList.size() > 1) {
+                            pageOffsetList = new ArrayList<>(newList);
+                            savePageOffsets(pageOffsetList);
+
+                            // 定位旧 offset
+                            int newPageIndex = findPageByOffset(pageOffsetList, savedOffset);
+                            currentSentenceIndex = savedSentence; // 恢复句索引
+                            showPage(newPageIndex);
+
+                            Toast.makeText(this, "重新分页完成", Toast.LENGTH_SHORT).show();
+                        }
+                        isPaging = false;
+                    });
+                } catch (Exception e) {
+                    Log.e(TAG, "重新分页失败", e);
+                    mainHandler.post(() -> {
+                        Toast.makeText(this, "重新分页失败", Toast.LENGTH_SHORT).show();
+                        isPaging = false;
+                    });
+                }
+            }).start();
+        });
+    }
+
+
+    private void restoreReaderSettings() {
+
+        // ========== 亮度 ==========
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.screenBrightness = appPreferences.getBrightness();
+        getWindow().setAttributes(lp);
+
+        // ========== 反白（夜间模式） ==========
+        boolean invert = appPreferences.isInvertMode();
+        if (invert) {
+            textView.setBackgroundColor(Color.BLACK);
+            textView.setTextColor(Color.WHITE);
+        } else {
+            textView.setBackgroundColor(Color.WHITE);
+            textView.setTextColor(Color.BLACK);
+        }
+
+        // ========== 字体 ==========
+        String fontPath = appPreferences.getFontPath();
+        try {
+            Typeface tf = Typeface.createFromAsset(getAssets(), fontPath);
+            textView.setTypeface(tf);
+        } catch (Exception e) {
+            Log.e("Reader", "字体加载失败：" + fontPath);
+        }
+
+        // ========== 字号 ==========
+        float savedSp = appPreferences.getTextSizeSp( 16f); // 若你用不同名请改
+        Log.d(TAG, "global_text_size:= " + savedSp);
+        textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, savedSp);
+
+        // ========== 行距 ==========
+        float spacing = appPreferences.getLineSpacing();
+        textView.setLineSpacing(0, spacing);
+
+        // ★★★★★
+        // 设置恢复后必须重新分页（保持当前页位置）
+//        updatePagingParams();
+//        rebuildPaginationAndRestore();
+    }
+
+
+    private void updatePagingParams() {
+        if (textView == null || splitter == null) return;
+
+        // 1. 字体大小
+        float textSize = textView.getTextSize(); // px
+        splitter.setTextSize(textSize);
+
+        // 2. 行距倍数
+        splitter.setLineSpacingMultiplier(currentLineSpacing);
+
+        // 3. 可用宽度/高度
+        int width = textView.getWidth() - textView.getPaddingLeft() - textView.getPaddingRight();
+        int height = textView.getHeight() - textView.getPaddingTop() - 15*textView.getPaddingBottom();
+        splitter.setPageWidth(width);
+        splitter.setPageHeight(height);
+
+        Log.d(TAG, "updatePagingParams: size=" + textSize + "  lineSpace=" + currentLineSpacing +
+                "  pageWidth=" + width + "  pageHeight=" + height);
+    }
 
     private Charset detectEncoding(File file) {
         byte[] buf = new byte[4096];
@@ -361,337 +942,111 @@ public class ReaderActivity extends AppCompatActivity {
             detector.dataEnd();
             String encoding = detector.getDetectedCharset();
             detector.reset();
+
             if (encoding != null) {
-                return Charset.forName(encoding);
+                try {
+                    return Charset.forName(encoding);
+                } catch (Exception ignored) {
+                }
             }
+        } catch (Exception ignored) {
+        }
+
+        // ----------- 强制安全 fallback -------------
+        try {
+            return Charset.forName("UTF-8");
         } catch (Exception e) {
-            e.printStackTrace();
+            return StandardCharsets.UTF_8; // 永远不会失败
         }
-        return Charset.forName("GBK");
     }
 
-    public void loadPage(List<Integer> pageOffsets,int page) {
-        Log.d("loadPage", totalPages + " loadPage1- " + page);
-        Log.d("loadPage", totalPages + " pageOffsets- " + pageOffsets);
+    private float currentLineSpacing = 1.5f; // 默认 1.5 倍行距
 
-        Log.d("loadPage", totalPages + "page >= pageOffsets.size()- " +( page >= pageOffsets.size()));
-        if (pageOffsets == null || page < 0 || page >= pageOffsets.size()) return;
-        Log.d("loadPage", totalPages + " loadPage2- " + page);
-        if (page < 0 || page >= totalPages) return;
-        Log.d("loadPage", totalPages + " loadPage3- " + page);
+/*
 
-        // 这里不要再用 fullText.length()，改用持久化的 textLength
-        textLength = appPreferences.getTextLength(filePath);
-        Log.d("loadPage", totalPages + " loadPage4- " + page);
-        Log.d("TAG", "textLength = " + textLength);
+    public void adjustFontSize(float deltaSp) {
+        // 先读取当前显示的 px -> 转为 sp
+        float px = textView.getTextSize(); // px
+        float scaledDensity = getResources().getDisplayMetrics().scaledDensity;
+        float currentSp = px / scaledDensity;
 
-        int start = pageOffsets.get(page);
-        int end = (page + 1 < pageOffsets.size()) ? pageOffsets.get(page + 1) : textLength;
+        // 应用增量（deltaSp 单位：sp）
+        float newSp = currentSp + deltaSp;
+        if (newSp < 8f) newSp = 8f;      // 限制最小字体
+        if (newSp > 200f) newSp = 200f;  // 限制最大字体
 
-        Log.d("TAG", start + " loadPage:pageText " + end);
+        // 设置到 TextView（指定单位为 SP，避免歧义）
+        textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, newSp);
 
-        // 防御：确保 start 和 end 合法
-        if (start < 0) start = 0;
-        if (end > textLength) end = textLength;
-        if (end < start) end = start;
-
-        // 每次只加载一段内容，而不是全文
-        Log.d(TAG, "readTextSegment: "+filePath);
-        String pageText = readTextSegment(filePath, start, end);
-
-        currentSentences = pageText.split("(?<=[.,，?!。！？])");
-
-        if (isInitialLoad && page == currentPage) {
-//            int lastSentence = PreferenceManager.getDefaultSharedPreferences(this).getInt("lastSentence", 0);  //改
-//            int lastSentence = this.appPreferences.getLastSentence();
-            sentenceIndex = Math.min(currentPage, currentSentences.length - 1);
-            isInitialLoad = false;  // 🔴 防止后续翻页继续恢复
+        // 保存为 SP（用你新的方法）
+*/
+/*        if (file != null) {
+            appPreferences.saveTextSizeSp(file.getAbsolutePath(), newSp);
         } else {
-            sentenceIndex = 0;
-        }
+            // 若无文件上下文，可保存为全局默认 key*//*
 
-        highlightSentence(-1);
-        currentPage = page;
-        seekBar.setProgress(page);
-        updatePageInfo();
+        appPreferences.saveTextSizeSp("global_text_size", newSp);
+//        }
 
-        new Thread(() -> {
-            runOnUiThread(() -> {
-                if (ttsManager == null) {
-                    ttsManager = new TextToSpeechManager(this, this::onTtsDone);
-                    ttsManager.setSpeed(speechRate);
-                    // 自动点击
-                    new Handler().postDelayed(() -> {
-                        // 模拟点击事件
-                        if (0 == TextToSpeech.SUCCESS) {
-                            toggleSpeaking();
-                        }
-                    }, 2000);
-                }
-            });
-        }).start();
-    }
+        // 字号变了需要重新分页 / 更新参数
+*/
+/*        updatePagingParams();
+        rebuildPaginationAndRestore();*//*
 
-    private void toggleSpeaking() {
-        if (isSpeaking) {
-            ttsManager.stop();
-            isSpeaking = false;
-            btnTTS.setText("▶️");
-        } else {
-            controlActivity.hide();
-            speakCurrentPage();
-        }
-    }
-
-    private void speakCurrentPage() {
-        isSpeaking = true;
-        btnTTS.setText("⏸️");
-        speakNextSentence();
-    }
-
-    private void speakNextSentence() {
-        if (currentSentences == null) return;
-
-        if (sentenceIndex >= currentSentences.length) {
-            if (currentPage < totalPages - 1) {
-                // 下一页
-                currentPage++;
-                sentenceIndex = 0;
-                appPreferences.saveCurrentPage(filePath, currentPage);
-
-                loadPage(pageOffsetsTemp != null && !pageOffsetsTemp.isEmpty()
-                        ? pageOffsetsTemp : pageOffsets, currentPage);
-
-                // 等 loadPage 完成后，再继续朗读
-                speakNextSentence();
-            } else {
-                // 已到最后一页
-                isSpeaking = false;
-                btnTTS.setText("▶️");
-                highlightSentence(-1);
-            }
-            return;
-        }
-
-        String sentence = currentSentences[sentenceIndex];
-        highlightSentence(sentenceIndex);
-
-        // 清理句子
-        sentence = sentence.replaceAll("[^\\u4e00-\\u9fa5a-zA-Z0-9\\s]{3,}", "")
-                .replaceAll("[\"“”]", "")
-                .replaceAll("\\.", "");
-
-//        Log.d(TAG, "speak:"+sentence);
-        ttsManager.speak(sentence);
-    }
-
-    private void onTtsDone() {
-        int globalOffset = 0;
-        if (pageOffsets != null && !pageOffsets.isEmpty()) {
-            if (currentPage >= pageOffsets.size()) {
-                currentPage = pageOffsets.size() - 1;
-                sentenceIndex = 0;
-            }
-            globalOffset = pageOffsets.get(currentPage);
-        }
-
-        // 粗略：句子前几个字的 offset
-        if (currentSentences != null && sentenceIndex < currentSentences.length) {
-            globalOffset += currentSentences[sentenceIndex].length();
-        }
-
-        appPreferences.saveProgress(filePath, currentPage, sentenceIndex, globalOffset);
-        appPreferences.setLastPage(currentPage);
-        appPreferences.setLastSentence(sentenceIndex);
-
-        appPreferences.saveCurrentPage(filePath, currentPage);
-        sentenceIndex++;
-        speakNextSentence();
     }
 
 
-    private void highlightSentence(int index) {
-        SpannableStringBuilder builder = new SpannableStringBuilder();
-        for (int i = 0; i < currentSentences.length; i++) {
-            int start = builder.length();
-            builder.append(currentSentences[i]);
-            int end = builder.length();
-
-            if (i == index) {
-                builder.setSpan(new ForegroundColorSpan(Color.RED), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            } else if (i < index) {
-                builder.setSpan(new ForegroundColorSpan(Color.GRAY), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            }
-        }
-        textView.setText(builder);
+    public void adjustLineSpace(float delta) {
+        currentLineSpacing += delta;
+        if (currentLineSpacing < 1f) currentLineSpacing = 1f;
+        textView.setLineSpacing(0f, currentLineSpacing);
+        appPreferences.saveLineSpacing(currentLineSpacing); // 保存当前行距
     }
-
-    private void setupSeekBar() {
-        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            public void onProgressChanged(SeekBar s, int p, boolean fromUser) {
-                if (fromUser) {
-                    if (isSpeaking) {
-                        ttsManager.stop();
-                        isSpeaking = false;
-                        btnTTS.setText("▶️");
-                    }
-                    currentPage = p;
-//                    loadPage(p);
-                    Log.d(TAG, "setupSeekBar: loadPage 5");
-//                    loadPage( pageOffsets, p);
-                    loadPage(pageOffsetsTemp != null && !pageOffsetsTemp.isEmpty() ? pageOffsetsTemp : pageOffsets, p);
-                }
-            }
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-            public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-    }
-
-    private void updatePageInfo() {
-        if (pageInfo != null) {
-            float percent = totalPages > 0 ? (currentPage + 1) * 100f / totalPages : 0f;
-            String text = String.format("%d/%d  %.0f%%", currentPage + 1, totalPages, percent);
-            pageInfo.setText(text);
-        }
-
-        if (seekBar.getProgress() != currentPage) {
-            seekBar.setProgress(currentPage);
-        }
-    }
-
-    private void setupTouchControl() {
-        textView.setOnTouchListener((v, e) -> {
-            if (e.getAction() == MotionEvent.ACTION_DOWN) {
-                float x = e.getX();
-                float width = textView.getWidth();
-
-                if (isSpeaking) return true;
-
-                if (x < width / 3f) {
-                    if (currentPage > 0) {
-                        currentPage--;
-//                        loadPage(currentPage);
-                        Log.d(TAG, "setupTouchControl: loadPage 6");
-//                        loadPage(pageOffsets, currentPage);
-                        loadPage(pageOffsetsTemp != null && !pageOffsetsTemp.isEmpty() ? pageOffsetsTemp : pageOffsets, currentPage);
-                    }
-                } else if (x > width * 2 / 3f) {
-                    if (currentPage < totalPages - 1) {
-                        currentPage++;
-//                        loadPage(currentPage);
-                        Log.d(TAG, "setupTouchControl: loadPage 7");
-//                        loadPage(pageOffsets, currentPage);
-                        loadPage(pageOffsetsTemp != null && !pageOffsetsTemp.isEmpty() ? pageOffsetsTemp : pageOffsets, currentPage);
-                    }
-
-                } else {
-                    controlActivity.toggleVisibility();
-                }
-            }
-            return true;
-        });
-    }
+*/
 
 
     @Override
     protected void onDestroy() {
-/*        PreferenceManager.getDefaultSharedPreferences(this).edit()
-                .putString("lastFilePath", getIntent().getStringExtra("filePath"))
-                .putInt("lastPage", currentPage)
-                .putInt("lastSentence", sentenceIndex)
-                .apply();*/
-
-        appPreferences.saveCurrentPage(filePath,currentPage);
-        appPreferences.setTotalPages(totalPages);
-
-        appPreferences.setSpeechRate(speechRate);
-        appPreferences.setFontSize(fontSize);
-        appPreferences.setLastPage(currentPage);
-        appPreferences.setLastSentence(sentenceIndex);
-
-
-
-        appPreferences.setLastFilePath(filePath);
-        appPreferences.setMaxCharsPerPage(appPreferences.getMaxCharsPerPage());
-
-        if (ttsManager != null) {
-            ttsManager.stop();
-            ttsManager.shutdown();
-        }
         super.onDestroy();
+        if (ttsManager != null) ttsManager.shutdown();
     }
 
 
-    public void adjustFontSize(float delta) {
-        float newSize = textView.getTextSize() / getResources().getDisplayMetrics().scaledDensity + delta;
-        textView.setTextSize(newSize);
-        this.appPreferences.setFontSize(newSize);
-//        PreferenceManager.getDefaultSharedPreferences(this).edit()
-//                .putFloat("fontSize", newSize).apply();
-
-/*        textView.postDelayed(() -> {
-            buildPageOffsets();
-            loadPage(currentPage);
-        }, 200);*/
+    // 显示/隐藏设置面板
+    private void toggleSettingsPanel() {
+        if (settingsPanel.getVisibility() == View.VISIBLE) settingsPanel.setVisibility(View.GONE);
+        else settingsPanel.setVisibility(View.VISIBLE);
     }
 
-    public void updateTheme(boolean isDark) {
-//        PreferenceManager.getDefaultSharedPreferences(this).edit()
-//                .putBoolean("isDark", isDark).apply();
-        this.appPreferences.setDarkTheme(isDark);
+    private String getCacheFileName() {
+        String path = file.getAbsolutePath();
+        long lastMod = file.lastModified();
+        long size = file.length();
 
-        int bg = isDark ? Color.BLACK : Color.WHITE;
-        int fg = isDark ? Color.LTGRAY : Color.DKGRAY;
-        textView.setBackgroundColor(bg);
-        textView.setTextColor(fg);
+        // 构造唯一字符串
+        String key = path + "_" + lastMod + "_" + size;
+
+        // 转为安全文件名（仅由 0~9a~f 组成）
+        String md5 = md5(key);
+
+        return "page_offsets_" + md5 + ".dat";
     }
 
-
-
-    public void setFont(String fontName) {
-        Typeface typeface;
-
-        switch (fontName) {
-            case "宋体":
-                typeface = Typeface.create("serif", Typeface.NORMAL);
-                break;
-            case "黑体":
-                typeface = Typeface.create("sans-serif", Typeface.NORMAL);
-                break;
-            case "楷体":
-                typeface = Typeface.create("cursive", Typeface.NORMAL); // Android 不一定内置楷体
-                break;
-
-/*            case "微软雅黑":
-                // 微软雅黑可能在 Android 中不存在，你可以将字体文件放到 assets/fonts/ 目录中
-                try {
-                    typeface = Typeface.createFromAsset(getAssets(), "fonts/microsoft_yahei.ttf");
-                } catch (Exception e) {
-                    typeface = Typeface.DEFAULT;
-                    Toast.makeText(this, "未找到微软雅黑字体，已切换为默认", Toast.LENGTH_SHORT).show();
-                }
-                break;*/
-            default:
-                typeface = Typeface.DEFAULT;
-                break;
-        }
-
-        textView.setTypeface(typeface);
-    }
-
-    private String readTextSegment(String filePath, int start, int end) {
-        File file = new File(filePath);
-        Charset charset = detectEncoding(file);
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), charset))) {
-            reader.skip(start);
-            char[] buf = new char[end - start];
-            int read = reader.read(buf, 0, end - start);
-            if (read > 0) {
-                return new String(buf, 0, read);
+    private String md5(String s) {
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
+            byte[] bytes = md.digest(s.getBytes("UTF-8"));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : bytes) {
+                sb.append(String.format("%02x", b));
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+            return sb.toString();
+        } catch (Exception e) {
+            return String.valueOf(s.hashCode());
         }
-        return "";
     }
+
+
+
 }
+

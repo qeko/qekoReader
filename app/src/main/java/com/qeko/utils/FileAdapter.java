@@ -3,7 +3,13 @@ package com.qeko.utils;
 
 
 
+import static android.content.ContentValues.TAG;
+
 import android.graphics.Color;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.style.ForegroundColorSpan;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -28,6 +34,7 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
 
     private List<FileItem> allItems = new ArrayList<>();
     private List<FileItem> visibleItems = new ArrayList<>();
+    private String searchKeyword = "";    // 当前搜索关键字
     private OnItemClickListener listener;
 
     public FileAdapter(List<FileItem> items) {
@@ -50,6 +57,41 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
         notifyDataSetChanged();
     }
 
+// ====== 模糊搜索 ======
+    public void filter(String keyword) {
+        this.searchKeyword = keyword != null ? keyword.trim().toLowerCase() : "";
+        visibleItems.clear();
+
+        if (searchKeyword.isEmpty()) {
+            // 显示全部
+            for (FileItem item : allItems) {
+                visibleItems.add(item);
+                if (item.isFolder() && item.isExpanded()) {
+                    visibleItems.addAll(item.getChildren());
+                }
+            }
+        } else {
+            // 搜索匹配
+            for (FileItem item : allItems) {
+                String name = item.getFile().getName().toLowerCase();
+                if (name.contains(searchKeyword)) {
+                    visibleItems.add(item);
+                }
+                // 如果是文件夹，也检查子文件
+                if (item.isFolder()) {
+                    for (FileItem child : item.getChildren()) {
+                        if (child.getFile().getName().toLowerCase().contains(searchKeyword)) {
+                            visibleItems.add(child);
+                        }
+                    }
+                }
+            }
+        }
+
+        notifyDataSetChanged();
+    }
+
+
     /** MainActivity中调用，用于更新列表数据 **/
     public void setData(List<FileItem> newItems) {
         visibleItems.clear();
@@ -61,6 +103,12 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
 
     public FileItem getItemAt(int position) {
         return visibleItems.get(position);
+    }
+
+    public void updateAllItems(List<FileItem> newItems) {
+        this.allItems.clear();
+        this.allItems.addAll(newItems);
+        filter(searchKeyword); // 保留当前搜索状态
     }
 
     @NonNull
@@ -149,10 +197,31 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
             holder.itemView.setAlpha(1.0f);
         }*/
 
+
+
+        if (!searchKeyword.isEmpty()) {
+            int start = name.toLowerCase().indexOf(searchKeyword);
+            if (start >= 0) {
+                int end = start + searchKeyword.length();
+                SpannableString spannable = new SpannableString(name);
+                spannable.setSpan(new ForegroundColorSpan(Color.RED), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                holder.title.setText(spannable);
+            } else {
+                holder.title.setText(name);
+            }
+        } else {
+            holder.title.setText(name);
+        }
+
         // 点击事件
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) listener.onItemClick(item);
         });
+    }
+
+    public void removeItem(int position) {
+        visibleItems.remove(position);
+        notifyItemRemoved(position);
     }
 
 /*
@@ -255,11 +324,13 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
         TextView title;
         TextView extra;
 
+
         ViewHolder(@NonNull View itemView) {
             super(itemView);
             icon = itemView.findViewById(R.id.icon);
             title = itemView.findViewById(R.id.title);
             extra = itemView.findViewById(R.id.extraInfo);
+
         }
 
         void bind(FileItem item, OnItemClickListener listener) {
@@ -299,4 +370,6 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
         allItems.addAll(items);
         refreshDisplayItems();
     }
+
+
 }

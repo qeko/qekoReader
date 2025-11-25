@@ -1,12 +1,11 @@
-
-
 package com.qeko.utils;
 
 /*import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfReader;
 import com.itextpdf.kernel.pdf.canvas.parser.PdfTextExtractor;
 import com.itextpdf.kernel.pdf.canvas.parser.listener.LocationTextExtractionStrategy;*/
-
+//import org.apache.pdfbox.pdmodel.PDDocument;
+//import org.apache.pdfbox.text.PDFTextStripper;
 
 import static android.content.ContentValues.TAG;
 
@@ -17,9 +16,12 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+
+import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.AssetManager;
+import android.service.controls.ControlsProviderService;
 import android.text.TextUtils;
 
 //import androidx.pdf.PdfDocument;
@@ -69,6 +71,7 @@ import nl.siegmann.epublib.epub.EpubReader;
 
 public class FileUtils {
     private static final String PAGE_OFFSET_EXT = ".pageoffsets";
+
     // 递归扫描 .txt 文件
     public static List<File> scanAll(File dir, FileTypeStrategy strategy) {
         List<File> result = new ArrayList<>();
@@ -85,6 +88,67 @@ public class FileUtils {
             }
         }
         return result;
+    }
+
+    public static void extractTextFromPdfIncremental(File pdfFile, File outTxtFile, Context context,
+                                                     String fontPath,
+                                                     int startPage, int maxPages,
+                                                     ExtractProgressCallback callback) {
+        new Thread(() -> {
+            try {
+/*                int totalPages = getPdfPageCount(pdfFile);
+
+                try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
+                        new FileOutputStream(outTxtFile, startPage > 0), StandardCharsets.UTF_8))) { // append if startPage>0
+
+                    for (int i = startPage; i < totalPages; i++) {
+                        if (i >= startPage + maxPages) break; // 增量限制
+
+                        String pageText = processPdfPage(pdfFile, i, fontPath); // 返回本页文本
+                        writer.write(pageText);
+                        writer.flush();
+
+                        int progress = (int) ((i + 1) * 100f / totalPages);
+                        if (callback != null) {
+                            int finalProgress = progress;
+                            ((Activity) context).runOnUiThread(() -> callback.onProgress(finalProgress));
+                        }
+                    }
+                }*/
+
+
+
+            } catch (Exception e) {
+                e.printStackTrace();
+
+            }
+        }).start();
+    }
+
+
+    // 回调接口
+    public interface ExtractProgressCallback {
+        void onProgress(int progress);   // 0..100
+        void onDone();
+    }
+    // ==========================================================
+    // 工具函数
+    // ==========================================================
+    public static Charset detectEncoding(File file) {
+        byte[] buf = new byte[4096];
+        try (FileInputStream fis = new FileInputStream(file)) {
+            UniversalDetector detector = new UniversalDetector(null);
+            int nread;
+            while ((nread = fis.read(buf)) > 0 && !detector.isDone())
+                detector.handleData(buf, 0, nread);
+            detector.dataEnd();
+            String encoding = detector.getDetectedCharset();
+            detector.reset();
+            if (encoding != null) return Charset.forName(encoding);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return Charset.forName("UTF-8");
     }
 
     public static List<File> scanFilesIn(File dir, FileTypeStrategy strategy) {
@@ -460,10 +524,10 @@ public class FileUtils {
                     writer.newLine();
                 }
 
-                if (page % batchSize == 0 || page == totalPages) {
+/*                if (page % batchSize == 0 || page == totalPages) {
                     writer.flush();
                     Log.d("FileUtils", "已写入页码: " + (page - batchSize + 1) + "-" + page);
-                }
+                }*/
             }
 
             reader.close();
@@ -475,83 +539,6 @@ public class FileUtils {
         }
     }
 
-    /**
-     * 从PDF提取文字并按100页批次追加写入 .pdftxt 文件
-
-     * @return 生成的 .pdftxt 文件路径
-     */
-
-/*
-    public static boolean extractTextFromPdf(File pdfFile, Context context, File outputTxtFile) {
-        String pdfPath = pdfFile.getAbsolutePath();
-//        String outputPath = pdfPath + ".pdftxt";
-//        File outFile = new File(outputPath);
-
-        if (outputTxtFile.exists()) {
-            outputTxtFile.delete(); // 确保重新生成
-        }
-
-        FileOutputStream fos = null;
-        PdfReader reader = null;
-
-        try {
-            reader = new PdfReader(pdfPath);
-            int totalPages = reader.getNumberOfPages();
-            fos = new FileOutputStream(outputTxtFile, true); // 追加模式
-
-            StringBuilder batchText = new StringBuilder();
-            int batchSize = 100;
-
-            for (int page = 1; page <= totalPages; page++) {
-                String text = PdfTextExtractor.getTextFromPage(reader, page);
-                batchText.append(text).append("\n");
-
-                // 每满100页 或最后一页，写入一次
-                if (page % batchSize == 0 || page == totalPages) {
-                    fos.write(batchText.toString().getBytes("UTF-8"));
-                    fos.flush();
-                    Log.d("FileUtils", "已写入页码: " + (page - batchSize + 1) + "-" + page);
-                    batchText.setLength(0); // 清空 StringBuilder
-                }
-            }
-
-//            Log.d("FileUtils", "提取完成，生成: " );
-//            return outputPath;
-
-        } catch (Exception e) {
-            e.printStackTrace();
-//            return null;
-
-        } finally {
-            if (reader != null) reader.close();
-            if (fos != null) {
-                try { fos.close(); } catch (IOException ignored) {}
-            }
-        }
-        return  true;
-    }
-*/
-
-
-    private static Charset detectEncoding(File file) {
-        byte[] buf = new byte[4096];
-        try (FileInputStream fis = new FileInputStream(file)) {
-            UniversalDetector detector = new UniversalDetector(null);
-            int nread;
-            while ((nread = fis.read(buf)) > 0 && !detector.isDone()) {
-                detector.handleData(buf, 0, nread);
-            }
-            detector.dataEnd();
-            String encoding = detector.getDetectedCharset();
-            detector.reset();
-            if (encoding != null) {
-                return Charset.forName(encoding);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return Charset.forName("GBK");
-    }
 
     /**
      * 从 assets 中拷贝字体文件到 cache 目录
@@ -663,7 +650,7 @@ public class FileUtils {
     }
 
     // 序列化保存分页偏移数组
-    public static void savePageOffsets(Context ctx, String filePath, List<Integer> offsets) {
+    public static void savePageOffsets(Context ctx, String filePath, List<Long> offsets) {
         if (offsets == null) return;
             File cacheFile = new File(ctx.getCacheDir(), new File(filePath).getName() + ".pagecache");
             try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(cacheFile))) {
@@ -725,5 +712,217 @@ public class FileUtils {
             e.printStackTrace();
         }
     }*/
+
+
+
+    private static void appendText(File outFile, String text) {
+        if (text == null || text.isEmpty()) return;
+
+        try {
+            // 自动创建文件
+            if (!outFile.exists()) {
+                outFile.createNewFile();
+            }
+
+            // FileWriter 第二个参数 true = 追加写入
+            FileWriter fw = new FileWriter(outFile, true);
+            BufferedWriter bw = new BufferedWriter(fw);
+
+            bw.write(text);
+            bw.write("\n\n");  // 每章后空两行，便于分页
+            bw.flush();
+            bw.close();
+            fw.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static String extractChapterText(Book book, int chapterIndex) {
+        List<SpineReference> spineList = book.getSpine().getSpineReferences();
+
+        if (chapterIndex < 0 || chapterIndex >= spineList.size()) {
+            return "";
+        }
+
+        try {
+            Resource res = spineList.get(chapterIndex).getResource();
+
+            // 资源可能为 null
+            if (res == null) return "";
+
+            byte[] data = res.getData();
+            if (data == null) return "";
+
+            String html = new String(data, StandardCharsets.UTF_8);
+
+            // 去除 HTML 标签
+            return html.replaceAll("<[^>]+>", "").trim();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "";
+        }
+    }
+
+
+    private static String htmlToText(String html) {
+        // 非常简洁但效果好的 HTML → TEXT
+        html = html.replaceAll("(?is)<br */?>", "\n");
+        html = html.replaceAll("(?is)</p>", "\n\n");
+        html = html.replaceAll("(?is)<[^>]+>", "");   // 去掉所有 HTML 标签
+        html = html.replace("&nbsp;", " ");
+        return html.trim();
+    }
+
+    public static void extractTextFromPdfIncrementalSafe(
+            File pdfFile,
+            Context context,
+            AppPreferences prefs,
+            String keyBase
+    ) {
+        if (pdfFile == null || !pdfFile.exists()) return;
+
+        String outputPath = pdfFile.getAbsolutePath() + ".pdftxt";
+        int lastExtractedPage = prefs.getPdfExtractedPage(keyBase); // 获取上次抽取页
+
+        PdfReader reader = null;
+        BufferedWriter writer = null;
+
+        try {
+            reader = new PdfReader(pdfFile.getAbsolutePath());
+            int totalPages = reader.getNumberOfPages();
+            Log.d("FileUtils", "PDF总页数: " + totalPages);
+
+            // 已抽取页等于总页数，则无需抽取
+            if (lastExtractedPage >= totalPages) {
+                Log.d("FileUtils", "PDF已完全抽取，无需重复抽取");
+                return;
+            }
+
+            // 如果输出文件不存在或者从头抽取，则覆盖
+            if (!new File(outputPath).exists() || lastExtractedPage <= 0) {
+                lastExtractedPage = 0;
+                writer = new BufferedWriter(new OutputStreamWriter(
+                        new FileOutputStream(outputPath, false), StandardCharsets.UTF_8));
+            } else {
+                // 增量抽取：在原文件基础上追加
+                writer = new BufferedWriter(new OutputStreamWriter(
+                        new FileOutputStream(outputPath, true), StandardCharsets.UTF_8));
+                Log.d("FileUtils", "从第 " + (lastExtractedPage + 1) + " 页开始增量抽取");
+            }
+
+            for (int page = lastExtractedPage + 1; page <= totalPages; page++) {
+                String text = PdfTextExtractor.getTextFromPage(reader, page);
+
+                if (text != null && !text.trim().isEmpty()) {
+                    writer.write(text);
+                    writer.newLine();
+                } else {
+                    writer.write("[第 " + page + " 页无可提取文本,PDF 存的不是文字，而是 扫描图片]");
+                    writer.newLine();
+                }
+
+                // 保存当前已抽取页到 AppPreferences
+                prefs.savePdfExtractedPage(keyBase, page);
+
+                Log.d("FileUtils", "已抽取页: " + page);
+            }
+
+            Log.d("FileUtils", "PDF增量抽取完成，输出路径: " + outputPath);
+
+        } catch (Exception e) {
+            Log.e("FileUtils", "PDF抽取失败", e);
+        } finally {
+            try {
+                if (writer != null) writer.close();
+            } catch (Exception ignored) {}
+            if (reader != null) reader.close();
+        }
+    }
+    public static void extractEpubIncrementalSafe(
+            File epubFile,
+            File outputTxtFile,
+            Context context,
+            AppPreferences prefs,
+            String keyBase // 用于保存章节抽取进度
+    ) {
+        try {
+            Book book = new EpubReader().readEpub(new FileInputStream(epubFile));
+            Spine spine = book.getSpine();
+            List<SpineReference> spineRefs = spine.getSpineReferences();
+            int totalChapters = spineRefs.size();
+
+            // 获取上次已抽取的章节索引，如果没有则为0
+            int startChapter = Math.max(0, prefs.getEpubExtractedChapter(keyBase));
+
+            // 如果全部章节已抽取，则直接返回
+            if (startChapter >= totalChapters) {
+                Log.d("FileUtils", "EPUB 已全部抽取: " + epubFile.getName());
+                return;
+            }
+
+            // 如果输出文件不存在，则创建
+            if (!outputTxtFile.exists()) {
+                outputTxtFile.getParentFile().mkdirs();
+                outputTxtFile.createNewFile();
+            }
+
+            // 打开文件追加写入
+            try (BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(new FileOutputStream(outputTxtFile, true), StandardCharsets.UTF_8))) {
+
+                for (int i = startChapter; i < totalChapters; i++) {
+                    SpineReference ref = spineRefs.get(i);
+                    Resource res = ref.getResource();
+                    if (res != null) {
+                        try {
+                            String html = new String(res.getData(), StandardCharsets.UTF_8);
+                            // 去掉 HTML 标签，只保留文本
+                            String text = html.replaceAll("<[^>]+>", "\n")
+                                    .replaceAll("\\s+", " ")
+                                    .trim();
+                            if (!text.isEmpty()) {
+                                writer.write(text);
+                                writer.newLine();
+                            }
+                        } catch (Exception e) {
+                            Log.e("FileUtils", "解析章节失败: " + i, e);
+                        }
+                    }
+
+                    // 保存当前抽取章节索引
+                    prefs.saveEpubExtractedChapter(keyBase, i + 1);
+                }
+            }
+
+            Log.d("FileUtils", "EPUB 增量抽取完成: " + epubFile.getName());
+
+        } catch (Exception e) {
+            Log.e("FileUtils", "extractEpubIncrementalSafe 出错: " + epubFile.getName(), e);
+        }
+    }
+
+
+
+
+    public static int countChapters(File epubFile) {
+        try {
+            EpubReader reader = new EpubReader();
+            Book book = reader.readEpub(new FileInputStream(epubFile));
+
+            List<SpineReference> spineList = book.getSpine().getSpineReferences();
+
+            return spineList.size();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+
+
 
 }
