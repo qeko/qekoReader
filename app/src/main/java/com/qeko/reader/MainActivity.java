@@ -45,7 +45,6 @@ import com.qeko.utils.AppPreferences;
 import com.qeko.utils.FileAdapter;
 import com.qeko.utils.FileItem;
 import com.qeko.utils.FileUtils;
-import com.qeko.utils.ScanCacheManager;
 
 import java.io.File;
 import java.util.*;
@@ -330,7 +329,7 @@ public class MainActivity extends Activity {
         return new ArrayList<>();
     }
 
-    public List<File> reloadWithStrategy(Context context, FileTypeStrategy strategy, String cacheKey) {
+/*    public List<File> reloadWithStrategy(Context context, FileTypeStrategy strategy, String cacheKey) {
         Set<String> cachedDirs = ScanCacheManager.getCachedDirs(context, cacheKey);
         Set<String> updatedDirs = new HashSet<>();
         List<File> result = new ArrayList<>();
@@ -347,7 +346,7 @@ public class MainActivity extends Activity {
         // 更新缓存（去掉已无文档的目录）
         ScanCacheManager.saveCachedDirs(context, cacheKey, updatedDirs);
         return result;
-    }
+    }*/
     private void ensureStoragePermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!Environment.isExternalStorageManager()) {
@@ -602,10 +601,10 @@ private        ArrayList<File> pdfList;
 //                intent = new Intent(this, PdfReaderActivity.class);
 //            } else if (name.endsWith(".epub")) {
 //                intent = new Intent(this, EpubReaderActivity.class);  // 需实现
-            } else if (name.endsWith(".mobi")) {
-                intent = new Intent(this, MobiReaderActivity.class);  // 需实现
-            } else if (name.endsWith(".azw") || name.endsWith(".azw3")) {
-                intent = new Intent(this, KindleReaderActivity.class); // 需实现
+//            } else if (name.endsWith(".mobi")) {
+//                intent = new Intent(this, MobiReaderActivity.class);  // 需实现
+//            } else if (name.endsWith(".azw") || name.endsWith(".azw3")) {
+//                intent = new Intent(this, KindleReaderActivity.class); // 需实现
             } else if (name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".flac")) {
                 intent = new Intent(this, MusicPlayerActivity.class);
             } else if (name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".avi") || name.endsWith(".mpg")) {

@@ -22,7 +22,7 @@ public class AppPreferences {
     // ====== 保存阅读进度 ======
 
     public void saveProgress(String filePath, long offset, int sentenceIndex, int page) {
-        Log.d("TAG", "saveProgress: "+filePath);
+//        Log.d("TAG", "saveProgress: "+filePath);
         preferences.edit()
                 .putLong(filePath + "_offset", offset)
                 .putInt(filePath + "_sentence", sentenceIndex)

@@ -12,6 +12,7 @@ toolsCore = "1.0.0-alpha13"
 preference = "1.2.1"
 roomCompilerProcessingTesting = "2.7.2"
 pdfViewer = "1.0.0-alpha10"
+firebaseInappmessaging = "22.0.1"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -26,6 +27,7 @@ tools-core = { group = "androidx.privacysandbox.tools", name = "tools-core", ver
 preference = { group = "androidx.preference", name = "preference", version.ref = "preference" }
 room-compiler-processing-testing = { group = "androidx.room", name = "room-compiler-processing-testing", version.ref = "roomCompilerProcessingTesting" }
 pdf-viewer = { group = "androidx.pdf", name = "pdf-viewer", version.ref = "pdfViewer" }
+firebase-inappmessaging = { group = "com.google.firebase", name = "firebase-inappmessaging", version.ref = "firebaseInappmessaging" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

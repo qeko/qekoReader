@@ -1,6 +1,5 @@
 package com.qeko.reader;
 
-import static java.lang.Thread.sleep;
 
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -94,19 +93,6 @@ public class ReaderActivity extends AppCompatActivity {
         settingsManager = new ReaderSettingsManager(this);
         settingsManager.initViews();
 
-//        TextView tvFont = findViewById(R.id.tvFontSizeValue);
-//        TextView tvLine = findViewById(R.id.tvLineSpacingValue);
-//        TextView tvSpeed = findViewById(R.id.tvSpeechRateValue);
-//        TextView tvBright = findViewById(R.id.tvBrightnessValue);
-        // 按钮示例
-
-
-//       settingsManager = ReaderSettingsManager.getInstance(this,textView);
-        // 读取 TXT 成功后，再调用
-//        settingsManager.applyAllSettings(this, textView);
-
-        setupSettingButtons();
-
         appPreferences = new AppPreferences(this);
         ttsManager.setSpeed(appPreferences.getSpeechRate());
 
@@ -119,15 +105,14 @@ public class ReaderActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.btnApplySettings).setOnClickListener(v -> {
-
             // 1. 保存所有设置（已实时保存，这里只补充必要处理）
             float brightness = appPreferences.getBrightness();
             settingsManager.changeBrightness(brightness);
-
             // 3. 隐藏设置面板
             settingsPanel.setVisibility(View.GONE);
         });
-
+        speakNextSentence();
+        setupSettingButtons();
 //        initSettingsPanel();
     }
 
@@ -158,11 +143,7 @@ public class ReaderActivity extends AppCompatActivity {
 
             textView.setLineSpacing(0f, spacing);
             appPreferences.saveLineSpacing(spacing);
-
-
         });
-
-
 // 行距 - 按钮
         findViewById(R.id.btnDecreaseLineSpacing).setOnClickListener(v -> {
             settingsManager.changeLineSpacing(-0.1f);
@@ -179,32 +160,13 @@ public class ReaderActivity extends AppCompatActivity {
 // 亮度 +
         findViewById(R.id.btnIncreaseBrightness).setOnClickListener(v -> {
 
-            settingsManager.changeBrightness(+0.05f);
-
-            WindowManager.LayoutParams lp = window.getAttributes();
-            float b = lp.screenBrightness + 0.05f;
-            if (b > 1f) b = 1f;
-
-            lp.screenBrightness = b;
-            window.setAttributes(lp);
-
-            appPreferences.saveBrightness(b);
+            changeBrightness(+0.05f);
 
         });
 
 // 亮度 -
         findViewById(R.id.btnDecreaseBrightness).setOnClickListener(v -> {
-
-            settingsManager.changeBrightness(-0.05f);
-
-            WindowManager.LayoutParams lp = window.getAttributes();
-            float b = lp.screenBrightness - 0.05f;
-            if (b < 0.01f) b = 0.01f;
-
-            lp.screenBrightness = b;
-            window.setAttributes(lp);
-
-            appPreferences.saveBrightness(b);
+            changeBrightness(-0.05f);
 
         });
 
@@ -277,93 +239,20 @@ public class ReaderActivity extends AppCompatActivity {
         window.setAttributes(lp);
     }
 
-/*
-    private void setupSettingButtons() {
 
-        // 字体按钮
-//        settingsPanel.findViewById(R.id.btnFontSelect).setOnClickListener(v -> settingsManager.setFont());
-
-        // 字号
-        settingsPanel.findViewById(R.id.btnIncreaseFontSize).setOnClickListener(v -> settingsManager.increaseFontSize());
-        settingsPanel.findViewById(R.id.btnDecreaseFontSize).setOnClickListener(v -> settingsManager.decreaseFontSize());
-
-        // 行距
-        settingsPanel.findViewById(R.id.btnIncreaseLineSpacing).setOnClickListener(v -> settingsManager.increaseLineSpacing());
-        settingsPanel.findViewById(R.id.btnDecreaseLineSpacing).setOnClickListener(v -> settingsManager.decreaseLineSpacing());
-
-        // 语速
-        settingsPanel.findViewById(R.id.btnIncreaseSpeed).setOnClickListener(v -> {settingsManager.increaseSpeed();     updateTtsSpeed(this.appPreferences.getSpeechRate());});
-        settingsPanel.findViewById(R.id.btnDecreaseSpeed).setOnClickListener(v -> {settingsManager.decreaseSpeed();     updateTtsSpeed(this.appPreferences.getSpeechRate());});
-
-        // 亮度
-        settingsPanel.findViewById(R.id.btnIncreaseBrightness).setOnClickListener(v -> settingsManager.increaseBrightness(this));
-        settingsPanel.findViewById(R.id.btnDecreaseBrightness).setOnClickListener(v -> settingsManager.decreaseBrightness(this));
-        // 反白
-        settingsPanel.findViewById(R.id.btnToggleInvert).setOnClickListener(v -> settingsManager.toggleInvert());
-
-        // 确定 → 重新分页
-        settingsPanel.findViewById(R.id.btnApplySettings).setOnClickListener(v -> {
-       //更新语速
-//       updateTtsSpeed(this.appPreferences.getSpeechRate());
-
-
-            settingsPanel.setVisibility(View.GONE);
-        });
-
-
+    private void changeBrightness(float delta) {
+        Window window = getWindow(); // Activity 的 window
+        WindowManager.LayoutParams lp = window.getAttributes();
+        float brightness = lp.screenBrightness;
+        if (brightness < 0f) brightness = 0.5f; // 默认
+        brightness += delta;
+        if (brightness < 0.01f) brightness = 0.01f;
+        if (brightness > 1f) brightness = 1f;
+        lp.screenBrightness = brightness;
+        window.setAttributes(lp);
+        // 保存到偏好
+        appPreferences.saveBrightness(brightness);
     }
-*/
-
-
-/*
-    private void initSettingsPanel() {
-
-
-
-        TextView tvFont = findViewById(R.id.tvFontSizeValue);
-        TextView tvLine = findViewById(R.id.tvLineSpacingValue);
-        TextView tvSpeed = findViewById(R.id.tvSpeechRateValue);
-        TextView tvBright = findViewById(R.id.tvBrightnessValue);
-
-        // 初始化 UI 显示
-*/
-/*
-        tvFont.setText(String.valueOf(settings.getFontSize()));
-        tvLine.setText(String.format("%.1f", settings.getLineSpacing()));
-        tvSpeed.setText(String.format("%.1f", settings.getTtsSpeed()));
-        tvBright.setText(String.valueOf(settings.getBrightness()));
-*//*
-
-
-        // 监听设置变化，实时更新 UI
-        settingsManager.setOnSettingChangeListener((key, value) -> {
-            runOnUiThread(() -> {
-                switch (key) {
-                    case "fontSize": tvFont.setText(String.valueOf((int) value)); break;
-                    case "lineSpacing": tvLine.setText(String.format("%.1f", value)); break;
-                    case "ttsSpeed": tvSpeed.setText(String.format("%.1f", value)); break;
-                    case "brightness": tvBright.setText(String.valueOf((int) value)); break;
-                }
-            });
-        });
-
-*/
-/*        // 按钮
-        findViewById(R.id.btnIncreaseFont).setOnClickListener(v -> settings.increaseFontSize());
-        findViewById(R.id.btnDecreaseFont).setOnClickListener(v -> settings.decreaseFontSize());
-
-        findViewById(R.id.btnIncreaseLineSpacing).setOnClickListener(v -> settings.increaseLineSpacing());
-        findViewById(R.id.btnDecreaseLineSpacing).setOnClickListener(v -> settings.decreaseLineSpacing());
-
-        findViewById(R.id.btnIncreaseSpeed).setOnClickListener(v -> settings.increaseSpeed());
-        findViewById(R.id.btnDecreaseSpeed).setOnClickListener(v -> settings.decreaseSpeed());
-
-        findViewById(R.id.btnIncreaseBrightness).setOnClickListener(v -> settings.increaseBrightness());
-        findViewById(R.id.btnDecreaseBrightness).setOnClickListener(v -> settings.decreaseBrightness());*//*
-
-    }
-*/
-
 
 
     private void updateTtsSpeed(float speed) {
@@ -835,7 +724,7 @@ public class ReaderActivity extends AppCompatActivity {
             splitter.setTextSize(textView.getTextSize());
             splitter.setLineSpacingMultiplier(currentLineSpacing);
             splitter.setPageWidth(textView.getWidth()); //- textView.getPaddingLeft() - textView.getPaddingRight()
-            splitter.setPageHeight(textView.getHeight() - textView.getPaddingTop() - 18 * textView.getPaddingBottom());
+            splitter.setPageHeight(textView.getHeight() - textView.getPaddingTop() - 15 * textView.getPaddingBottom());
 
 
             new Thread(() -> {

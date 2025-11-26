@@ -35,7 +35,7 @@ public class PageSplitter {
         this.file = file;
         this.paint = measureView.getPaint();
         this.pageWidth = Math.max(1, measureView.getWidth() - measureView.getPaddingLeft() - measureView.getPaddingRight());
-        this.pageHeight = Math.max(1, measureView.getHeight() - measureView.getPaddingTop() - measureView.getPaddingBottom());
+        this.pageHeight = Math.max(1, measureView.getHeight() - measureView.getPaddingTop() - 15*measureView.getPaddingBottom());
         this.charset = detectEncoding(file); // 保证非 null（fallback 在 detectEncoding 内已处理）
     }
 
