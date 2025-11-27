@@ -54,12 +54,12 @@ public class ReaderActivity extends AppCompatActivity {
     private TextView pageInfo;
     private Button btnTTS;
     private SeekBar pageSeekBar;
-
+    public TextToSpeechManager ttsManager;
 
     private File file;
     private Charset charset;
 
-    public TextToSpeechManager ttsManager;
+
 
     private ReaderSettingsManager settingsManager;
     public AppPreferences appPreferences;
@@ -75,11 +75,14 @@ public class ReaderActivity extends AppCompatActivity {
     private Handler mainHandler;
     private Window window = getWindow();
     private volatile boolean isPaging = false;
-
+    private boolean initTTS = true;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_reader);
+
+        ttsManager = new TextToSpeechManager(this, this::onTtsDone);
+
 
         textView = findViewById(R.id.textView);
         pageSeekBar = findViewById(R.id.pageSeekBar);
@@ -89,15 +92,16 @@ public class ReaderActivity extends AppCompatActivity {
         filePath = getIntent().getStringExtra("filePath");
         file = new File(filePath);
 
-        ttsManager = new TextToSpeechManager(this, this::onTtsDone);
-        settingsManager = new ReaderSettingsManager(this);
-        settingsManager.initViews();
 
         appPreferences = new AppPreferences(this);
         ttsManager.setSpeed(appPreferences.getSpeechRate());
 
+        settingsManager = new ReaderSettingsManager(this);
+        settingsManager.initViews();
+
+
         mainHandler = new Handler(Looper.getMainLooper());
-        openBook(file);
+
         restoreReaderSettings();
 
         findViewById(R.id.btnToggleInvert).setOnClickListener(v -> {
@@ -110,10 +114,24 @@ public class ReaderActivity extends AppCompatActivity {
             settingsManager.changeBrightness(brightness);
             // 3. 隐藏设置面板
             settingsPanel.setVisibility(View.GONE);
+
+            // 如果变更了字体、行距 → 执行重新分页
+            if (settingsManager.getChange()) {
+                  settingsManager.setChange(false);
+                rebuildPaginationAndRestore();  // ←———— 核心
+            }
+
         });
-        speakNextSentence();
-        setupSettingButtons();
-//        initSettingsPanel();
+//        speakNextSentence();
+//        toggleSpeaking();
+
+        openBook(file);           // 打开书本
+        setupSettingButtons();    // 初始化按钮事件
+        // 2️⃣ 延迟3秒后执行打开书和设置按钮
+/*        mainHandler.postDelayed(() -> {
+            openBook(file);           // 打开书本
+            setupSettingButtons();    // 初始化按钮事件
+        }, 2000);*/
     }
 
     private void setupSettingButtons() {
@@ -254,12 +272,12 @@ public class ReaderActivity extends AppCompatActivity {
         appPreferences.saveBrightness(brightness);
     }
 
-
+/*
     private void updateTtsSpeed(float speed) {
         if (ttsManager != null) {
             ttsManager.setSpeed(speed);
         }
-    }
+    }*/
 
     // ========== 抽取完成后初始化分页和显示 ==========
     private void initAfterTextExtraction(File textFile) {
@@ -366,6 +384,7 @@ public class ReaderActivity extends AppCompatActivity {
     }
 
 
+/*
 
     private void extractRemainingPagesInBackground(File pdfFile, File outFile, int startPage) {
         FileUtils.extractTextFromPdfIncremental(pdfFile, outFile, this, "fonts/SimsunExtG.ttf", startPage, Integer.MAX_VALUE,
@@ -384,6 +403,7 @@ public class ReaderActivity extends AppCompatActivity {
                     }
                 });
     }
+*/
 
 
     // ========== 加载并显示页（0-based 页索引） ==========
@@ -452,6 +472,8 @@ public class ReaderActivity extends AppCompatActivity {
             if (currentSentenceIndex >= currentSentences.length) currentSentenceIndex = 0;
 
             // 🔥 分句完成后立即开始朗读
+//            Log.d(TAG, "displayPageTextAndPrepareTTS: ");
+
             speakNextSentence();
         });
     }
@@ -527,10 +549,18 @@ public class ReaderActivity extends AppCompatActivity {
 
     // ========== TTS 逐句相关 ==========
     private void speakNextSentence() {
-//        Log.d(TAG, "speakNextSentence: ");
         if (currentSentences == null || currentSentenceIndex >= currentSentences.length) return;
         highlightSentence(currentSentences[currentSentenceIndex]);
+//        Log.d(TAG, "speakNextSentence: "+currentSentences[currentSentenceIndex]);
+
+        if(initTTS) {
+            initTTS = false;
+            mainHandler.postDelayed(() -> {
+                ttsManager.speak(currentSentences[currentSentenceIndex]);
+            }, 2000);
+        }
         ttsManager.speak(currentSentences[currentSentenceIndex]);
+
     }
 
     private void onTtsDone() {
@@ -551,7 +581,7 @@ public class ReaderActivity extends AppCompatActivity {
                     currentSentenceIndex,    // sentence index
                     currentPage              // page index
             );
-
+            Log.d(TAG, "onTtsDone: ");
             speakNextSentence();
             return;
         }
@@ -616,6 +646,30 @@ public class ReaderActivity extends AppCompatActivity {
     }
 
     private void toggleSpeaking() {
+//        Log.d(TAG, "toggleSpeaking: 111");
+        if(btnTTS.getText().equals("🔇"))
+        {
+//            Log.d(TAG, "toggleSpeaking: 222");
+            btnTTS.setText("🎧");
+            // 先确保 currentSentences 已准备
+            if (currentSentences == null || currentSentences.length == 0) {
+//                Log.d(TAG, "toggleSpeaking: 2525");
+
+                // 重新准备当前页
+                showPage(currentPage - 1);
+            }
+            // 读取 appPreferences 中保存的句子索引（如果打开时恢复）
+//            Log.d(TAG, "toggleSpeaking: ");
+            speakNextSentence();
+        }else
+        {
+//            Log.d(TAG, "toggleSpeaking: 333");
+            btnTTS.setText("🔇");
+            ttsManager.stop();
+        }
+    }
+
+    /*
         if (ttsManager.isSpeaking()) {
             ttsManager.stop();
             btnTTS.setText("🔇");
@@ -629,8 +683,7 @@ public class ReaderActivity extends AppCompatActivity {
             }
             // 读取 appPreferences 中保存的句子索引（如果打开时恢复）
             speakNextSentence();
-        }
-    }
+        }*/
 
     // ========== 保存/加载分页缓存 ==========
     private void savePageOffsets(List<Long> list) {
@@ -724,9 +777,9 @@ public class ReaderActivity extends AppCompatActivity {
             splitter.setTextSize(textView.getTextSize());
             splitter.setLineSpacingMultiplier(currentLineSpacing);
             splitter.setPageWidth(textView.getWidth()); //- textView.getPaddingLeft() - textView.getPaddingRight()
-            splitter.setPageHeight(textView.getHeight() - textView.getPaddingTop() - 15 * textView.getPaddingBottom());
+            splitter.setPageHeight(textView.getHeight() - textView.getPaddingTop() -  textView.getPaddingBottom() - 1100) ;
 
-
+//            Log.d(TAG, "rebuildPaginationAndRestore: "+ textView.getPaddingBottom()*15);
             new Thread(() -> {
                 try {
                     splitter.buildPageOffsets();
@@ -812,7 +865,7 @@ public class ReaderActivity extends AppCompatActivity {
 
         // 3. 可用宽度/高度
         int width = textView.getWidth() - textView.getPaddingLeft() - textView.getPaddingRight();
-        int height = textView.getHeight() - textView.getPaddingTop() - 15*textView.getPaddingBottom();
+        int height = textView.getHeight() - textView.getPaddingTop() - textView.getPaddingBottom() - 1000 ;
         splitter.setPageWidth(width);
         splitter.setPageHeight(height);
 

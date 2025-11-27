@@ -41,6 +41,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 
+import com.qeko.tts.TextToSpeechManager;
 import com.qeko.utils.AppPreferences;
 import com.qeko.utils.FileAdapter;
 import com.qeko.utils.FileItem;
@@ -56,13 +57,11 @@ public class MainActivity extends Activity {
     private FileAdapter adapter;
     private List<FileItem> displayItems = new ArrayList<>();
     private Map<File, List<File>> folderMap = new HashMap<>();
-//    private static final String PREFS_NAME = "scan_cache";
-//    private static final String LAST_FILE_PATH = "lastFilePath";
+
     private Button btnBooks, btnImages, btnMusic, btnVideo;
     private Button  btnConfirm,btnCancel;
     private FileTypeStrategy currentStrategy;
     private String currentCacheKey;
-    private Spinner spinner;
     private Handler handler = new Handler(Looper.getMainLooper());
     private Runnable exitRunnable;
     private TextView tvCountdown;
@@ -75,21 +74,17 @@ public class MainActivity extends Activity {
     private CountDownTimer countDownTimer;
     private long selectedTimeMillis = 0;
     private  EditText etSearch;
-/*    private RecyclerView rvImages;
-    private Button btnSwitchView;
-    private boolean isGrid = true; // 当前是否为网格视图*/
+    private Map<String, List<String>> categoryDirs = new HashMap<>();
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-//        setContentView(R.layout.activity_settime);
         appPreferences = new AppPreferences(this);
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-
-//        rvImages = findViewById(R.id.rvImages);
-//        btnSwitchView = findViewById(R.id.btnSwitchView);
 
         adapter = new FileAdapter(displayItems);
         recyclerView.setAdapter(adapter);
@@ -97,7 +92,6 @@ public class MainActivity extends Activity {
         btnImages = findViewById(R.id.btnImages);
         btnMusic = findViewById(R.id.btnMusic);
         btnVideo = findViewById(R.id.btnVideo);
-//        btnSetting = findViewById(R.id.btnSetting);
 
         etSearch = findViewById(R.id.etSearch);
         ImageButton btnClearSearch = findViewById(R.id.btnClearSearch);
@@ -107,15 +101,7 @@ public class MainActivity extends Activity {
         btnMusic.setOnClickListener(v -> switchCategory(new MusicFileStrategy(), "MUSIC_DIRS"));
         btnVideo.setOnClickListener(v -> switchCategory(new VideoFileStrategy(), "VIDEO_DIRS"));
         switchCategory(new BookFileStrategy(), "BOOK_DIRS");
-//        controlActivity = new ControlActivity(findViewById(R.id.controlPanel), this);
-
-//        btnSetting.setOnClickListener(v -> controlActivity.toggleVisibility());
-
-
-//        controlActivity.toggleVisibility();
         ensureStoragePermission();
-
-
 
         new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.RIGHT) {
             @Override public boolean onMove(@NonNull RecyclerView r, @NonNull RecyclerView.ViewHolder v1, @NonNull RecyclerView.ViewHolder v2) { return false; }
@@ -147,6 +133,7 @@ public class MainActivity extends Activity {
         btnClearSearch.setOnClickListener(v -> {
             etSearch.setText("");
             adapter.filter(""); // 清空搜索显示所有
+            hideKeyboard(v);
         });
 
         // 隐藏输入面板（软键盘）
@@ -169,7 +156,6 @@ public class MainActivity extends Activity {
         btnCancel = findViewById(R.id.btnCancel);
         radioGroupTime = findViewById(R.id.radioGroupTime);
         tvCountdown = findViewById(R.id.tvCountdown);
-//        sp = getSharedPreferences("reader_prefs", MODE_PRIVATE);
 
         Button btnSetTime = findViewById(R.id.btnSetTime);
         panel = findViewById(R.id.setttime);
@@ -183,9 +169,6 @@ public class MainActivity extends Activity {
                 panel.setVisibility(View.VISIBLE);
             }
         });
-
-
-
         // 设置监听器：点击 RadioButton 时保存并启动倒计时
         timerGroup.setOnCheckedChangeListener((group, checkedId) -> {
             Log.d(TAG, "onCreate:  setOnCheckedChangeListener"+checkedId);
@@ -247,6 +230,8 @@ public class MainActivity extends Activity {
             cancelCountdown();
         });
 
+
+        initCategory();
     }
 
     private void hideKeyboard(View view) {
@@ -329,24 +314,7 @@ public class MainActivity extends Activity {
         return new ArrayList<>();
     }
 
-/*    public List<File> reloadWithStrategy(Context context, FileTypeStrategy strategy, String cacheKey) {
-        Set<String> cachedDirs = ScanCacheManager.getCachedDirs(context, cacheKey);
-        Set<String> updatedDirs = new HashSet<>();
-        List<File> result = new ArrayList<>();
 
-        for (String path : cachedDirs) {
-            File dir = new File(path);
-            List<File> files = FileUtils.scanFilesIn(dir, strategy); // 不递归
-            if (!files.isEmpty()) {
-                updatedDirs.add(path);
-                result.addAll(files);
-            }
-        }
-
-        // 更新缓存（去掉已无文档的目录）
-        ScanCacheManager.saveCachedDirs(context, cacheKey, updatedDirs);
-        return result;
-    }*/
     private void ensureStoragePermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!Environment.isExternalStorageManager()) {
@@ -405,38 +373,7 @@ public class MainActivity extends Activity {
             for (File f : filesInFolder) {
                 FileItem item = new FileItem(f, false);
 
-
-                // 判断是否图片（仅当 ImageFileStrategy 时）
-                // 如果是图片文件，直接加载缩略图
-//                if (isImageFile(f)) {
-//                    item.. icon.setScaleX(1f); // 确保不被放大
-//                    icon.setScaleY(1f);
-////                    item.setUseThumbnail(true);
-//                    layoutParams.width *= 3;
-//                    layoutParams.height *= 3;
-//                    imageView.setLayoutParams(layoutParams);
-//                }
-//                if (switchCategory == IMAGE_DIRS) {
-//                    icon.setScaleX(3.0f);
-//                    icon.setScaleY(3.0f);
-//                }
-//                if (switchCategory == IMAGE_DIRS) {
-//                    ViewGroup.LayoutParams params = icon.getLayoutParams();
-//                    params.width = params.width * 3;   // 放大3倍
-//                    params.height = params.height * 3; // 放大3倍
-//                    icon.setLayoutParams(params);
-//                }
-/*                if (isImageFile(f)) {
-                    // 使用 Glide 加载缩略图
-                    Glide.with(this)
-                            .load(f)
-                            .placeholder(R.drawable.ic_image_placeholder) // 占位图
-                            .centerCrop();
-//                            .into(item.getIconImageView()); // 你的 Item 里要有 ImageView 引用
-                }*/
-
-
-                if (!isImageFile(f) && pinnedPaths.contains(f.getAbsolutePath())) {
+                 if (!isImageFile(f) && pinnedPaths.contains(f.getAbsolutePath())) {
                     item.setPinned(true);
                 }
                 childItems.add(item);
@@ -506,6 +443,17 @@ public class MainActivity extends Activity {
     }
 
 
+    private void initCategory() {
+        // 先尝试加载缓存
+        categoryDirs = FileUtils.loadCategoryDirs(this);
+
+        if (categoryDirs == null || categoryDirs.isEmpty()) {
+            scanDocuments();
+        } else {
+            switchCategory(currentStrategy, currentCacheKey);
+        }
+    }
+
 
     private void scanDocuments() {
         Toast.makeText(this, "正在扫描，请稍候...", Toast.LENGTH_SHORT).show();
@@ -522,10 +470,8 @@ public class MainActivity extends Activity {
             for (String key : strategyMap.values()) {
                 resultDirs.put(key, new ArrayList<>());
             }
-
             // 一次遍历扫描
             scanAndClassify();
-
 
             runOnUiThread(() -> {
                 Toast.makeText(this, "扫描完成", Toast.LENGTH_SHORT).show();
@@ -534,22 +480,18 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-
     private void scanAndClassify() {
         File root = Environment.getExternalStorageDirectory();
-        Map<String, List<String>> categoryDirs = new HashMap<>();
-        categoryDirs.put("BOOK_DIRS", new ArrayList<>());
+         categoryDirs.put("BOOK_DIRS", new ArrayList<>());
         categoryDirs.put("IMAGE_DIRS", new ArrayList<>());
         categoryDirs.put("MUSIC_DIRS", new ArrayList<>());
         categoryDirs.put("VIDEO_DIRS", new ArrayList<>());
-
         scanDirectoryRecursive(root, categoryDirs);
-
         FileUtils.saveCategoryDirs(this, categoryDirs);
 //        Toast.makeText(this, "分类目录扫描完成", Toast.LENGTH_SHORT).show();
     }
 
-private        ArrayList<File> pdfList;
+
     private void scanDirectoryRecursive(File dir, Map<String, List<String>> categoryDirs) {
         if (dir == null || !dir.isDirectory() || dir.isHidden()) return;
 
@@ -586,11 +528,7 @@ private        ArrayList<File> pdfList;
     }
 
     private void openFile(File file) {
-
-
-
             savePinnedFilePath(file.getAbsolutePath());
-
             String name = file.getName().toLowerCase();
 
             Intent intent = null;
@@ -680,30 +618,21 @@ private        ArrayList<File> pdfList;
             }
         }
     }
-//    private final Handler handler = new Handler(Looper.getMainLooper());
 
     private void startBackgroundExtractionDelayed(File file) {
-
         // 延迟 10 秒后执行抽取任务
         handler.postDelayed(() -> {
-
             Executors.newSingleThreadExecutor().execute(() -> {
-
                 String path = file.getAbsolutePath();
-
                 if (path.toLowerCase().endsWith(".pdf")) {
-
                     FileUtils.extractTextFromPdfIncrementalSafe(
                             file,
                             MainActivity.this,
                             appPreferences,
                             path
                     );
-
                 } else if (path.toLowerCase().endsWith(".epub")) {
-
                     String textFilePath = path + ".epubtxt";
-
                     FileUtils.extractEpubIncrementalSafe(
                             file,
                             new File(textFilePath),
@@ -712,59 +641,9 @@ private        ArrayList<File> pdfList;
                             path
                     );
                 }
-
             });
-
         }, 10_000); // ← 延迟 10 秒执行
     }
-
-/*
-    private void startBackgroundExtraction(String path) {
-        File file = new File(path);
-        if (!file.exists()) return;
-
-        new Thread(() -> {
-            try {
-                if (path.toLowerCase().endsWith(".pdf")) {
-                    FileUtils.extractTextFromPdfIncrementalSafe(file, this, appPreferences, path);
-                } else if (path.toLowerCase().endsWith(".epub")) {
-                    String textFilePath = path + ".epubtxt";
-                    FileUtils.extractEpubIncrementalSafe(file, new File(textFilePath), this, appPreferences, path);
-                }
-            } catch (Exception e) {
-                Log.e("MainActivity", "增量抽取失败: " + path, e);
-            }
-        }).start();
-    }
-*/
-
-/*
-    private void startBackgroundExtraction(String path) {
-        File file = new File(path);
-        if (!file.exists()) return;
-        if (path.toLowerCase().endsWith(".pdf")) {
-            String textFilePath = path + ".pdftxt";
-            // 调用增量抽取
-            FileUtils.extractTextFromPdfIncrementalSafe(
-                    file,                   // PDF 文件
-                    this,                   // Context
-                    appPreferences,         // 管理增量进度
-                    path                    // keyBase
-            );
-        } else if (path.toLowerCase().endsWith(".epub")) {
-            String textFilePath = path + ".epubtxt";
-            FileUtils.extractEpubIncrementalSafe(
-                    file,                   // EPUB 文件
-                    new File(textFilePath), // 输出 txt 文件
-                    this,                   // Context
-                    appPreferences,         // 管理增量进度
-                    path                    // keyBase
-            );
-        }
-    }
-
-*/
-
 
 
     @Override

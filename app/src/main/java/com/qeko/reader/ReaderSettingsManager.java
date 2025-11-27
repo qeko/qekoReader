@@ -63,13 +63,14 @@ public class ReaderSettingsManager {
         currentFontSize = Math.max(8f, currentFontSize + deltaSp);
         tvFontSizeValue.setText(String.valueOf((int) currentFontSize));
 
-
+        change=true;
     }
 
     // ---------------- 行距 ----------------
     public void changeLineSpacing(float delta) {
         currentLineSpacing = Math.max(1.0f, currentLineSpacing + delta);
         tvLineSpacingValue.setText(String.format("%.1f", currentLineSpacing));
+        change=true;
     }
 
     // ---------------- 亮度 ----------------
@@ -84,10 +85,25 @@ public class ReaderSettingsManager {
     }
 
     // ---------------- 语速 ----------------
-    public void changeSpeechRate(float delta) {
+/*    public void changeSpeechRate(float delta) {
         currentSpeechRate = Math.max(0.5f, Math.min(2.0f, currentSpeechRate + delta));
         tvSpeechRateValue.setText(String.format("%.1f", currentSpeechRate));
+    }*/
+    public void changeSpeechRate(float delta) {
+        // 加减速度后四舍五入到最近的 0.1
+        currentSpeechRate = currentSpeechRate + delta;
+        currentSpeechRate = Math.max(0.5f, Math.min(2.0f, currentSpeechRate));
+        currentSpeechRate = (float)Math.round(currentSpeechRate * 10) / 10f;
+
+//        tvSpeechRateValue.setText(String.format("%.1f", currentSpeechRate));
+        tvSpeechRateValue.setText(String.format("%.1f", currentSpeechRate));
+
     }
+
+    private  boolean change=false;
+    public boolean getChange(){return change;}
+
+    public void setChange(boolean newchange){change = newchange;}
 
 
     // getters for ReaderActivity

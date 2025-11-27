@@ -1,5 +1,6 @@
 package com.qeko.tts;
 
+
 import android.content.Context;
 import android.os.Build;
 import android.os.Handler;
@@ -36,11 +37,17 @@ public class TextToSpeechManager {
         });
     }
 
+/*    public void getSpeedStatus() {
+        return tts.
+    }*/
+
     public void setSpeed(float speed) {
+
         tts.setSpeechRate(speed);
     }
 
     public boolean isSpeaking() {
+
         return tts.isSpeaking();
     }
 

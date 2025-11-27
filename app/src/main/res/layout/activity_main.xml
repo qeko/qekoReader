@@ -65,34 +65,74 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp">
 
-        <EditText
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_gravity="bottom"
+            android:layout_weight="1">
+
+            <EditText
+                android:id="@+id/etSearch"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:hint="文件名"
+                android:paddingLeft="12dp"
+                android:paddingRight="36dp"
+                android:background="@android:drawable/editbox_background_normal"
+                android:gravity="center_vertical" />
+
+            <ImageButton
+                android:id="@+id/btnClearSearch"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center_vertical|right"
+                android:layout_marginRight="10dp"
+                android:background="@android:color/transparent"
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:tint="@android:color/darker_gray"
+                android:contentDescription="clear"
+                android:scaleType="centerInside" />
+
+        </FrameLayout>
+
+  <!--      <EditText
             android:id="@+id/etSearch"
             android:layout_width="0dp"
             android:layout_height="40dp"
             android:layout_weight="1"
-            android:hint="文件名"
+            android:hint="查找"
             android:padding="8dp" />
         <ImageButton
             android:id="@+id/btnClearSearch"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:padding="6dp"
+            android:background="@drawable/bg_round_button"
             android:src="@android:drawable/ic_menu_close_clear_cancel"
-            android:contentDescription="清空" />
-
-
-
+            android:tint="@android:color/black"
+            android:scaleType="centerInside"
+            android:contentDescription="clear"
+            android:layout_gravity="center_vertical" />-->
 
         <Button
             android:id="@+id/btnSetTime"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🕢" />
+            android:background="@android:color/transparent"
+            android:text="🕢"
+            android:textSize="25sp"
+        />
+
+
 
         <Button
             android:id="@+id/btnScan"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="🔄 刷新" />
+            android:background="@android:color/transparent"
+            android:textSize="24sp"
+            android:text="🔄 " />
 
 
         <!--        <Button
