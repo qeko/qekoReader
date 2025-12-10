@@ -73,7 +73,7 @@ public class ReaderActivity extends AppCompatActivity {
     private int currentSentenceIndex = 0;
     private LinearLayout settingsPanel;
     private Handler mainHandler;
-    private Window window = getWindow();
+//    private Window window = getWindow();
     private volatile boolean isPaging = false;
     private boolean initTTS = true;
     @Override
@@ -118,7 +118,10 @@ public class ReaderActivity extends AppCompatActivity {
             // 如果变更了字体、行距 → 执行重新分页
             if (settingsManager.getChange()) {
                   settingsManager.setChange(false);
-                rebuildPaginationAndRestore();  // ←———— 核心
+//                rebuildPaginationAndRestore();  // ←———— 核心
+//                Log.d(TAG, "重新分页");
+                pageOffsetList.clear();//触发重新分页
+                  this.startPaginationIfNeeded();
             }
 
         });
@@ -248,14 +251,14 @@ public class ReaderActivity extends AppCompatActivity {
         }
     }
 
-    public void applyBrightness(float value) {
-        // 保存
-        appPreferences.saveBrightness(value);
-
-        WindowManager.LayoutParams lp = window.getAttributes();
-        lp.screenBrightness = value;   // 0.0f~1.0f
-        window.setAttributes(lp);
-    }
+//    public void applyBrightness(float value) {
+//        // 保存
+//        appPreferences.saveBrightness(value);
+//
+//        WindowManager.LayoutParams lp = window.getAttributes();
+//        lp.screenBrightness = value;   // 0.0f~1.0f
+//        window.setAttributes(lp);
+//    }
 
 
     private void changeBrightness(float delta) {
@@ -348,7 +351,9 @@ public class ReaderActivity extends AppCompatActivity {
 
 //        boolean needPaging = (pageOffsetList.size() <= 1) || controlActivity.isForceRebuildPages();
         boolean needPaging = (pageOffsetList.size() <= 1);
+
         if (!needPaging) return;
+//        Log.d(TAG, "重新分页，调用startPaginationIfNeeded");
 
         isPaging = true;
         Toast.makeText(this, "请稍候...", Toast.LENGTH_SHORT).show();
@@ -359,7 +364,7 @@ public class ReaderActivity extends AppCompatActivity {
 
             new Thread(() -> {
                 try {
-                    splitter.buildPageOffsets();
+                    splitter.buildPageOffsets(settingsManager.getLineSpacing());
                     List<Long> newList = splitter.pageOffsetList;
 
                     mainHandler.post(() -> {
@@ -581,7 +586,7 @@ public class ReaderActivity extends AppCompatActivity {
                     currentSentenceIndex,    // sentence index
                     currentPage              // page index
             );
-            Log.d(TAG, "onTtsDone: ");
+//            Log.d(TAG, "onTtsDone: ");
             speakNextSentence();
             return;
         }
@@ -760,7 +765,7 @@ public class ReaderActivity extends AppCompatActivity {
 
 
     // 保留当前位置（currentStartByte）, 重新分页后用 findPageByOffset 定位
-    public void rebuildPaginationAndRestore() {
+    public void rebuildPaginationAndRestore() {   //合并到 startpagination
         if (isPaging) return;
         isPaging = true;
 
@@ -771,18 +776,18 @@ public class ReaderActivity extends AppCompatActivity {
         Toast.makeText(this, "正在重新分页，请稍候...", Toast.LENGTH_SHORT).show();
 
         textView.post(() -> {
-            splitter = new PageSplitter(file, textView);
+/*            splitter = new PageSplitter(file, textView);
 
             // 🔥 设置最新字体和行距
             splitter.setTextSize(textView.getTextSize());
             splitter.setLineSpacingMultiplier(currentLineSpacing);
             splitter.setPageWidth(textView.getWidth()); //- textView.getPaddingLeft() - textView.getPaddingRight()
-            splitter.setPageHeight(textView.getHeight() - textView.getPaddingTop() -  textView.getPaddingBottom() - 1100) ;
-
-//            Log.d(TAG, "rebuildPaginationAndRestore: "+ textView.getPaddingBottom()*15);
+            splitter.setPageHeight(textView.getHeight() ) ;*/
+            updatePagingParams();
+            Log.d(TAG, "行高: "+ (textView.getHeight() ));
             new Thread(() -> {
                 try {
-                    splitter.buildPageOffsets();
+                    splitter.buildPageOffsets(1.0f);
                     List<Long> newList = splitter.pageOffsetList;
 
                     mainHandler.post(() -> {
@@ -865,7 +870,7 @@ public class ReaderActivity extends AppCompatActivity {
 
         // 3. 可用宽度/高度
         int width = textView.getWidth() - textView.getPaddingLeft() - textView.getPaddingRight();
-        int height = textView.getHeight() - textView.getPaddingTop() - textView.getPaddingBottom() - 1000 ;
+        int height = textView.getHeight()  -600;
         splitter.setPageWidth(width);
         splitter.setPageHeight(height);
 

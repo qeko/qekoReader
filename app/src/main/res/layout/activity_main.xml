@@ -29,8 +29,11 @@
         android:textColor="@android:color/black"
         android:padding="12dp"
         android:background="@android:color/darker_gray" />-->
-
-
+<!--    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefresh"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">-->
+        <!-- 你的 RecyclerView 或 ListView -->
     <!-- RecyclerView 展示目录/文档结构 -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
@@ -48,14 +51,9 @@
         android:layout_height="wrap_content"
         android:paddingTop="8dp" />
 
-
-<!--    <include
-        android:id="@+id/musicPlayerPanel"
-        layout="@layout/activity_music_player"
-        android:visibility="gone" />-->
-    <!-- 刷新按钮 -->
-
-
+<!--
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+-->
 
     <!-- 定时退出 -->
     <LinearLayout
@@ -184,6 +182,7 @@
 
 
 </LinearLayout>
+
 
     <!-- 定时退出面板 -->
     <LinearLayout

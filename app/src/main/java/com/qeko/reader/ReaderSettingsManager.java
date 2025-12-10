@@ -1,3 +1,4 @@
+
 package com.qeko.reader;
 
 
@@ -111,4 +112,8 @@ public class ReaderSettingsManager {
     public float getLineSpacing() { return currentLineSpacing; }
     public float getBrightness() { return currentBrightness; }
     public float getSpeechRate() { return currentSpeechRate; }
+
+
+
+
 }

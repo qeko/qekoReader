@@ -1,23 +1,13 @@
 package com.qeko.reader;
 
-import android.util.Log;
-
 import java.io.File;
 
-// VideoFileStrategy.java
 public class VideoFileStrategy implements FileTypeStrategy {
-    private static final String[] EXTENSIONS = {"mp4", "mkv", "avi", "mpg"};
-
-    @Override
-    public boolean accept(File file) {
-        String name = file.getName().toLowerCase();
-//        Log.d("VideoFileStrategy", "accept1: "+name);
-        for (String ext : EXTENSIONS) {
-            if (name.endsWith("." + ext)) {
-//                Log.d("VideoFileStrategy", "accept2: "+name);
-                return true;
-            }
-        }
+    private static final String[] EXT = {".mp4",".mkv",".avi",".mov",".wmv",".ts"};
+    public static boolean acceptName(String name){
+        if (name==null) return false;
+        for (String e:EXT) if (name.endsWith(e)) return true;
         return false;
     }
+    @Override public boolean accept(File f){ return acceptName(f.getName().toLowerCase()); }
 }

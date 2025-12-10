@@ -40,10 +40,10 @@ public class PageSplitter {
     }
 
     // ========== 主分页函数（改进版） ==========
-    public void buildPageOffsets() throws Exception {
+    public void buildPageOffsets(float spacing) throws Exception {
         pageOffsetList.clear();
         pageOffsetList.add(0L);
-
+        Log.d(TAG, "spacing=: "+spacing);
         try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
             long fileLength = raf.length();
             long startByte = 0;
@@ -66,8 +66,9 @@ public class PageSplitter {
                 StaticLayout layout = StaticLayout.Builder.obtain(textBlock, 0, textBlock.length(), paint, pageWidth)
                         .setAlignment(Layout.Alignment.ALIGN_NORMAL)
                         .setIncludePad(false)
-                        .setLineSpacing(0f, 1.5f)
+                        .setLineSpacing(0f, spacing*1.64f)
                         .build();
+
 
                 int visibleCharCount = measureFittableChars(layout);
                 if (visibleCharCount <= 0) {
@@ -103,7 +104,7 @@ public class PageSplitter {
                 }
 
                 pageOffsetList.add(nextStart);
-                Log.d(TAG, "分页 → start=" + startByte + " next=" + nextStart + " validLen=" + validLen + " safeLen=" + safeLen);
+//                Log.d(TAG, "分页 → start=" + startByte + " next=" + nextStart + " validLen=" + validLen + " safeLen=" + safeLen);
 
                 startByte = nextStart;
             }

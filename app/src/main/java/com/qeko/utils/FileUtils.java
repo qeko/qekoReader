@@ -1,5 +1,5 @@
 package com.qeko.utils;
-
+import com.google.gson.Gson;
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -14,27 +14,34 @@ import android.text.TextUtils;
 import androidx.preference.PreferenceManager;
 
 import  nl.siegmann.epublib.domain.Resource;
+
+import com.google.firebase.crashlytics.buildtools.reloc.com.google.common.reflect.TypeToken;
 import com.itextpdf.text.pdf.PdfReader;
 
 import com.itextpdf.text.pdf.parser.PdfTextExtractor;
 
+import com.qeko.reader.CategoryDirs;
 import com.qeko.reader.FileTypeStrategy;
 
 import java.io.OutputStreamWriter;
 
+import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 
 import android.util.Log;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.mozilla.universalchardet.UniversalDetector;
 
@@ -43,33 +50,216 @@ import nl.siegmann.epublib.domain.Spine;
 import nl.siegmann.epublib.domain.SpineReference;
 import nl.siegmann.epublib.epub.EpubReader;
 
-public class FileUtils {
+public   class FileUtils {
     private static final String PAGE_OFFSET_EXT = ".pageoffsets";
+    private static final String TAG = "FileUtils";
+    private static final String PREF_NAME = "category_dirs";
 
-    // 递归扫描 .txt 文件
-    public static List<File> scanAll(File dir, FileTypeStrategy strategy) {
+
+    public static void saveCategoryDirs(Context context, CategoryDirs dirs) {
+        SharedPreferences sp = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        Map<String, List<String>> map = new HashMap<>();
+        for (String key : dirs.getAll().keySet()) {
+            List<File> files = dirs.getDirs(key);
+            List<String> paths = new ArrayList<>();
+            for (File f : files) paths.add(f.getAbsolutePath());
+            map.put(key, paths);
+        }
+        sp.edit().putString("json", new Gson().toJson(map)).apply();
+    }
+
+    public static CategoryDirs loadCategoryDirs(Context context) {
+        SharedPreferences sp = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        String json = sp.getString("json", null);
+        if (json == null) return new CategoryDirs();
+
+        Type type = new TypeToken<Map<String, List<String>>>() {}.getType();
+        Map<String, List<String>> map = new Gson().fromJson(json, type);
+        return CategoryDirs.fromMap(map);
+    }
+
+    // 根据策略重新加载文件
+    public static List<File> reloadWithStrategy(Context context, FileTypeStrategy strategy, String key) {
+        CategoryDirs dirs = loadCategoryDirs(context);
+        List<File> dirList = dirs.getDirs(key);
         List<File> result = new ArrayList<>();
-        if (dir == null || !dir.exists()) return result;
-
-        File[] files = dir.listFiles();
-        if (files == null) return result;
-
-        for (File f : files) {
-            if (f.isDirectory()) {
-                result.addAll(scanAll(f, strategy));
-            } else if (strategy.accept(f)) {
-                result.add(f);
+        for (File dir : dirList) {
+            if (!dir.exists() || !dir.isDirectory()) continue;
+            File[] files = dir.listFiles();
+            if (files == null) continue;
+            for (File f : files) {
+                if (strategy.accept(f)) {
+                    result.add(f);
+                }
             }
         }
         return result;
     }
 
-
-    // 回调接口
-    public interface ExtractProgressCallback {
-        void onProgress(int progress);   // 0..100
-        void onDone();
+    public static CategoryDirs mapToCategoryDirs(Map<String,List<String>> map) {
+        CategoryDirs dirs = new CategoryDirs();
+        for (String k: map.keySet()) {
+            List<String> arr = map.get(k);
+            if (arr == null) continue;
+            for (String p: arr) {
+                dirs.add(k, new File(p));  // 将 String 转 File
+            }
+        }
+        return dirs;
     }
+
+
+    /** ---------------------------------------
+     *  将 List<File> 保存成字符串
+     * ----------------------------------------*/
+    private static String toStringList(List<File> files) {
+        if (files == null || files.isEmpty()) return "";
+
+        StringBuilder sb = new StringBuilder();
+        for (File f : files) {
+            sb.append(f.getAbsolutePath()).append(";");
+        }
+        return sb.toString();
+    }
+
+    /** ---------------------------------------
+     *  将字符串还原成 List<File>
+     * ----------------------------------------*/
+    private static void fromStringList(String s, List<File> list) {
+        if (s == null || s.trim().isEmpty()) return;
+
+        String[] arr = s.split(";");
+        for (String path : arr) {
+            if (!path.trim().isEmpty()) {
+                list.add(new File(path.trim()));
+            }
+        }
+    }
+
+
+/*
+    public static List<File> reloadWithStrategy(Context ctx, FileTypeStrategy strategy, String cacheKey) {
+
+        CategoryDirs dirs = loadCategoryDirs(ctx);
+        List<File> target;
+
+        switch (cacheKey) {
+            case "BOOK_DIRS":
+                target = dirs.getBookDirs();
+                break;
+
+            case "IMAGE_DIRS":
+                target = dirs.getImageDirs();
+                break;
+
+            case "MUSIC_DIRS":
+                target = dirs.getMusicDirs();
+                break;
+
+            case "VIDEO_DIRS":
+                target = dirs.getVideoDirs();
+                break;
+
+            default:
+                target = new ArrayList<>();
+                break;
+        }
+
+        // 清除无效文件或不符合策略的文件
+        Iterator<File> it = target.iterator();
+        while (it.hasNext()) {
+            File f = it.next();
+            if (!f.exists() || !strategy.accept(f)) {
+                it.remove();
+            }
+        }
+
+        return target;
+    }
+*/
+
+
+    // -------- 文件类型判断 -------- //
+
+    public static boolean isBook(String name) {
+        name = name.toLowerCase();
+        return name.endsWith(".pdf")
+                || name.endsWith(".epub")
+                || name.endsWith(".txt")
+                || name.endsWith(".mobi");
+    }
+
+    public static boolean isImage(String name) {
+        name = name.toLowerCase();
+        return name.endsWith(".jpg")
+                || name.endsWith(".jpeg")
+                || name.endsWith(".png")
+                || name.endsWith(".webp")
+                || name.endsWith(".bmp")
+                || name.endsWith(".gif");
+    }
+
+    public static boolean isMusic(String name) {
+        name = name.toLowerCase();
+        return name.endsWith(".mp3")
+                || name.endsWith(".aac")
+                || name.endsWith(".wav")
+                || name.endsWith(".flac")
+                || name.endsWith(".m4a");
+    }
+
+    public static boolean isVideo(String name) {
+        name = name.toLowerCase();
+        return name.endsWith(".mp4")
+                || name.endsWith(".mkv")
+                || name.endsWith(".avi")
+                || name.endsWith(".mov")
+                || name.endsWith(".wmv")
+                || name.endsWith(".flv");
+    }
+
+    // -------- 获取扩展名 -------- //
+
+    public static String getExt(String name) {
+        int i = name.lastIndexOf(".");
+        if (i == -1) return "";
+        return name.substring(i).toLowerCase();
+    }
+
+    // -------- 安全 listFiles -------- //
+
+    public static File[] safeListFiles(File dir) {
+        try {
+            return dir.listFiles();
+        } catch (Throwable e) {
+            Log.e(TAG, "listFiles failed at: " + dir.getAbsolutePath(), e);
+            return null;
+        }
+    }
+
+
+
+
+    // -------- JSON 工具 -------- //
+
+    private static String toJson(java.util.List<String> list) {
+        JSONArray arr = new JSONArray();
+        for (String s : list) arr.put(s);
+        return arr.toString();
+    }
+
+    private static java.util.List<String> fromJson(String json) {
+        java.util.List<String> list = new java.util.ArrayList<>();
+        try {
+            JSONArray arr = new JSONArray(json);
+            for (int i = 0; i < arr.length(); i++) {
+                list.add(arr.getString(i));
+            }
+        } catch (JSONException ignored) {}
+        return list;
+    }
+
+
     // ==========================================================
     // 工具函数
     // ==========================================================
@@ -91,22 +281,18 @@ public class FileUtils {
     }
 
 
-    public static List<File> reloadWithStrategy(Context context, FileTypeStrategy strategy, String cacheKey) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        String cachedPaths = prefs.getString(cacheKey, "");  // ✅ 使用 getString
 
-//        Toast.makeText(context, "reloadWithStrategy="+cachedPaths, Toast.LENGTH_SHORT).show(); //读出来是0
+    /** 保存分类结果（可选，你原来有就保留） */
+    public static void saveCategoryDirs(Context context, Map<String, List<String>> categoryDirs) {
+        SharedPreferences sp = context.getSharedPreferences("CATEGORY_DIRS", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sp.edit();
 
-        List<File> result = new ArrayList<>();
-        if (!cachedPaths.isEmpty()) {
-            for (String path : cachedPaths.split(";")) {
-                File dir = new File(path);
-                if (dir.exists()) {
-                    result.addAll(scanDirectory(dir, strategy));
-                }
-            }
+        for (String key : categoryDirs.keySet()) {
+            JSONArray arr = new JSONArray(categoryDirs.get(key));
+            editor.putString(key, arr.toString());
         }
-        return result;
+
+        editor.apply();
     }
 
     public static List<File> getAllDirectories(File root) {
@@ -136,7 +322,8 @@ public class FileUtils {
                     count += countMatchingFiles(file, strategy);  // 递归检查子目录
 //                } else if (strategy.accept(file)) {
                 } else {
-                    Log.d("TAG", "else: " + file.getName());
+                    Log.d("TAG", "getAbsolutePath: " + file.getAbsolutePath());
+                    Log.d("TAG", count+"else: " + file.getName());
                     count++;
                 }
             }
@@ -151,6 +338,7 @@ public class FileUtils {
     /**
      * 保存分类目录
      */
+/*
     public static void saveCategoryDirs(Context context, Map<String, List<String>> categoryDirs) {
         try {
             JSONObject json = new JSONObject();
@@ -171,53 +359,7 @@ public class FileUtils {
             e.printStackTrace();
         }
     }
-
-    /**
-     * 读取分类目录缓存
-     */
-    public static Map<String, List<String>> loadCategoryDirs(Context context) {
-
-        Map<String, List<String>> result = new HashMap<>();
-
-        try {
-            File file = new File(context.getFilesDir(), CATEGORY_FILE);
-            if (!file.exists()) {
-                return result; // 返回空，表示需要扫描
-            }
-
-            FileInputStream fis = new FileInputStream(file);
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-
-            byte[] buffer = new byte[1024];
-            int len;
-            while ((len = fis.read(buffer)) != -1) {
-                bos.write(buffer, 0, len);
-            }
-
-            fis.close();
-            String jsonStr = bos.toString();
-
-            JSONObject json = new JSONObject(jsonStr);
-
-            for (Iterator<String> it = json.keys(); it.hasNext(); ) {
-                String key = it.next();
-                JSONArray arr = json.getJSONArray(key);
-                List<String> list = new ArrayList<>();
-
-                for (int i = 0; i < arr.length(); i++) {
-                    list.add(arr.getString(i));
-                }
-
-                result.put(key, list);
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return result; // 即使异常，也返回空 map
-    }
-
+*/
 
     /**
      * 判断目录下是否包含目标类型文件
@@ -255,7 +397,7 @@ public class FileUtils {
 */
 
 
-    private static List<File> scanDirectory(File dir, FileTypeStrategy strategy) {
+/*    private static List<File> scanDirectory(File dir, FileTypeStrategy strategy) {
         List<File> matched = new ArrayList<>();
         File[] files = dir.listFiles();
         if (files != null) {
@@ -266,7 +408,7 @@ public class FileUtils {
             }
         }
         return matched;
-    }
+    }*/
 
     public static void extractTextFromPdfIncrementalSafe(
             File pdfFile,

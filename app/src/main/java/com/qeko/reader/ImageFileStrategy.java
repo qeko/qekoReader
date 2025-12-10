@@ -6,18 +6,12 @@ import java.io.File;
 
 // ImageFileStrategy.java
 public class ImageFileStrategy implements FileTypeStrategy {
-    private static final String[] EXTENSIONS = {"jpg", "png", "bmp", "jpeg", "gif"};
+    private static final String[] EXTENSIONS = {".jpg", ".png", ".bmp", ".jpeg", ".gif"};
 
-    @Override
-    public boolean accept(File file) {
-        String name = file.getName().toLowerCase();
-        Log.d("ImageFileStrategy", "accept1: "+name);
-        for (String ext : EXTENSIONS) {
-            if (name.endsWith("." + ext)) {
-//                Log.d("ImageFileStrategy", "accept2: "+name);
-                return true;
-            }
-        }
+    public static boolean acceptName(String name){
+        if (name==null) return false;
+        for (String e:EXTENSIONS) if (name.endsWith(e)) return true;
         return false;
     }
+    @Override public boolean accept(File f){ return acceptName(f.getName().toLowerCase()); }
 }

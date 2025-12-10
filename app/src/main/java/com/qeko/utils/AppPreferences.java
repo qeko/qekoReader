@@ -31,17 +31,17 @@ public class AppPreferences {
     }
 
     public long getSavedOffset(String filePath) {
-        Log.d("TAG", "getSavedOffset: "+filePath);
+//        Log.d("TAG", "getSavedOffset: "+filePath);
         return preferences.getLong(filePath + "_offset", 0);
     }
 
     public int getSavedSentenceIndex(String filePath) {
-        Log.d("TAG", "getSavedSentenceIndex: "+filePath);
+//        Log.d("TAG", "getSavedSentenceIndex: "+filePath);
         return preferences.getInt(filePath + "_sentence", 0);
     }
 
     public int getSavedPage(String filePath) {
-        Log.d("TAG", "getSavedPage: "+filePath);
+//        Log.d("TAG", "getSavedPage: "+filePath);
         return preferences.getInt(filePath + "_page", 0);
     }
 

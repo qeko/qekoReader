@@ -1,23 +1,13 @@
 package com.qeko.reader;
 
-import android.util.Log;
-
 import java.io.File;
 
-// MusicFileStrategy.java
 public class MusicFileStrategy implements FileTypeStrategy {
-    private static final String[] EXTENSIONS = {"mp3", "wav", "flac"};
-
-    @Override
-    public boolean accept(File file) {
-        String name = file.getName().toLowerCase();
-        Log.d("MusicFileStrategy", "accept1: "+name);
-        for (String ext : EXTENSIONS) {
-            if (name.endsWith("." + ext)) {
-//                Log.d("MusicFileStrategy", "accept2: "+name);
-                return true;
-            }
-        }
+    private static final String[] EXT = {".mp3",".aac",".wav",".flac",".m4a",".ogg"};
+    public static boolean acceptName(String name){
+        if (name==null) return false;
+        for (String e:EXT) if (name.endsWith(e)) return true;
         return false;
     }
+    @Override public boolean accept(File f){ return acceptName(f.getName().toLowerCase()); }
 }
