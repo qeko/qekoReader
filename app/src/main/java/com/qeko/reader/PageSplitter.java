@@ -36,6 +36,7 @@ public class PageSplitter {
         this.paint = measureView.getPaint();
         this.pageWidth = Math.max(1, measureView.getWidth() - measureView.getPaddingLeft() - measureView.getPaddingRight());
         this.pageHeight = Math.max(1, measureView.getHeight() - measureView.getPaddingTop() - measureView.getPaddingBottom());
+//        this.pageHeight = Math.max(1, measureView.getHeight() );
         this.charset = detectEncoding(file); // 保证非 null（fallback 在 detectEncoding 内已处理）
     }
 
@@ -66,7 +67,7 @@ public class PageSplitter {
                 StaticLayout layout = StaticLayout.Builder.obtain(textBlock, 0, textBlock.length(), paint, pageWidth)
                         .setAlignment(Layout.Alignment.ALIGN_NORMAL)
                         .setIncludePad(false)
-                        .setLineSpacing(0f, spacing*1.64f)
+                        .setLineSpacing(0f, spacing)
                         .build();
 
 

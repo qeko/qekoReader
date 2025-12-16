@@ -356,7 +356,7 @@ public class ReaderActivity extends AppCompatActivity {
 //        Log.d(TAG, "重新分页，调用startPaginationIfNeeded");
 
         isPaging = true;
-        Toast.makeText(this, "请稍候...", Toast.LENGTH_SHORT).show();
+//        Toast.makeText(this, "请稍候...", Toast.LENGTH_SHORT).show();
 
         textView.post(() -> {
             splitter = new PageSplitter(file, textView);
@@ -506,7 +506,7 @@ public class ReaderActivity extends AppCompatActivity {
         int generatedPages = Math.max(0, pageOffsetList.size() - 1);
         if (page > generatedPages) {
             if (isPaging) {
-                Toast.makeText(this, "正在分页，暂不可跳转到该页", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(this, "正在分页，暂不可跳转到该页", Toast.LENGTH_SHORT).show();
                 return;
             } else {
                 page = generatedPages;
@@ -522,8 +522,8 @@ public class ReaderActivity extends AppCompatActivity {
         if (currentPage < Math.max(1, pageOffsetList.size() - 1)) {
             loadPage(currentPage + 1);
         } else {
-            if (isPaging)
-                Toast.makeText(this, "正在分页，已显示最后已生成页", Toast.LENGTH_SHORT).show();
+            if (isPaging){}
+//                Toast.makeText(this, "正在分页，已显示最后已生成页", Toast.LENGTH_SHORT).show();
             else Toast.makeText(this, "已是最后一页", Toast.LENGTH_SHORT).show();
         }
     }
@@ -764,6 +764,7 @@ public class ReaderActivity extends AppCompatActivity {
     }
 
 
+/*
     // 保留当前位置（currentStartByte）, 重新分页后用 findPageByOffset 定位
     public void rebuildPaginationAndRestore() {   //合并到 startpagination
         if (isPaging) return;
@@ -776,13 +777,15 @@ public class ReaderActivity extends AppCompatActivity {
         Toast.makeText(this, "正在重新分页，请稍候...", Toast.LENGTH_SHORT).show();
 
         textView.post(() -> {
+*/
 /*            splitter = new PageSplitter(file, textView);
 
             // 🔥 设置最新字体和行距
             splitter.setTextSize(textView.getTextSize());
             splitter.setLineSpacingMultiplier(currentLineSpacing);
             splitter.setPageWidth(textView.getWidth()); //- textView.getPaddingLeft() - textView.getPaddingRight()
-            splitter.setPageHeight(textView.getHeight() ) ;*/
+            splitter.setPageHeight(textView.getHeight() ) ;*//*
+
             updatePagingParams();
             Log.d(TAG, "行高: "+ (textView.getHeight() ));
             new Thread(() -> {
@@ -815,6 +818,7 @@ public class ReaderActivity extends AppCompatActivity {
         });
     }
 
+*/
 
     private void restoreReaderSettings() {
 

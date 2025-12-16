@@ -34,13 +34,12 @@
         android:layout_width="70dp"
         android:layout_height="wrap_content"
         android:text="伴唱"
-        android:visibility="gone"
         android:background="@android:color/transparent"
         android:layout_alignParentBottom="true"
         android:textColor="#D000FF"
         android:layout_alignParentRight="true"
         android:layout_margin="1dp"/>
-
+    <!--        android:visibility="gone"-->
     <!--    <Button-->
     <!--        android:id="@+id/btn_play_pause"-->
     <!--        android:layout_width="60dp"-->
@@ -55,11 +54,22 @@
         android:layout_width="70dp"
         android:layout_height="wrap_content"
 
-        android:text="重唱"
-        android:textColor="#FF006F"
-        android:background="@android:color/transparent"
         android:layout_alignParentBottom="true"
-        android:layout_margin="1dp"/>
+        android:layout_margin="1dp"
+        android:background="@android:color/transparent"
+        android:text="🔄"
+        android:textColor="#FF006F"
+        android:visibility="gone" />
+    <!-- activity_video_player.xml -->
+    <Switch
+        android:id="@+id/switch_orientation"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="▭"
+        android:checked="true"
+        android:layout_alignParentRight="true"
+        android:layout_margin="16dp"/>
+    <!--▯-->
 
 
     <TextView

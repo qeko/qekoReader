@@ -47,9 +47,11 @@
         <activity android:name=".ImageViewerActivity" />
         <activity android:name=".KindleReaderActivity" />
         <activity android:name=".PdfReaderActivity" />
-        <activity android:name=".VideoPlayerActivity"
-            android:configChanges="orientation|screenSize"
-            android:screenOrientation="sensorLandscape"/>
+        <activity
+            android:name=".VideoPlayerActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:screenOrientation="unspecified"/>
+
 
         <service android:name=".MusicService"
             android:exported="false" />

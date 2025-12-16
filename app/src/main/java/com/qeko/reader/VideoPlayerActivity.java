@@ -2,6 +2,7 @@ package com.qeko.reader;
 
 
 
+import android.content.pm.ActivityInfo;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
@@ -14,7 +15,10 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.widget.Button;
 import android.widget.SeekBar;
+import android.widget.Switch;
 import android.widget.Toast;
+
+
 import org.videolan.libvlc.LibVLC;
 import org.videolan.libvlc.Media;
 import org.videolan.libvlc.MediaPlayer;
@@ -33,7 +37,8 @@ public class VideoPlayerActivity extends Activity {
     private int currentIndex = 0;
     private GestureDetector gestureDetector;
     private SeekBar seekBar;
-    private Button btnSwitchAudioTrack,btnShowList,btnRepeat,btnFavrite;//btnPlayPause,
+    private Button btnSwitchAudioTrack,btnRepeat;//btnPlayPause,
+    private Switch switchOrientation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,16 +65,34 @@ public class VideoPlayerActivity extends Activity {
         mediaPlayer = new MediaPlayer(libVLC);
         mediaPlayer.attachViews(videoLayout, null, false, false);
         mediaPlayer.setVideoScale( MediaPlayer.ScaleType.SURFACE_FILL);
-//        Log.d("TAG", "mediaPlayer.getAudioTracksCount(): "+mediaPlayer.getAudioTracksCount());
-//
-//        if(mediaPlayer.getAudioTracksCount()<0) btnSwitchAudioTrack.setVisibility(View.GONE);
-//        else btnSwitchAudioTrack.setVisibility(View.VISIBLE);
 
-        mediaPlayer.setEventListener(event -> {
+
+/*     mediaPlayer.setEventListener(event -> {
             if (event.type == MediaPlayer.Event.EndReached) {
                 playNextVideo();
             }
+
+        });*/
+
+        mediaPlayer.setEventListener(event -> {
+            switch (event.type) {
+
+                case MediaPlayer.Event.Vout:   //版本低时不生效
+                    Media.VideoTrack track = mediaPlayer.getCurrentVideoTrack();
+                    if (track != null) {
+                        int w = track.width;
+                        int h = track.height;
+                        runOnUiThread(() -> handleOrientationByRatio(w, h));
+                    }
+                    break;
+
+                case MediaPlayer.Event.EndReached:
+                    runOnUiThread(this::playNextVideo);
+                    break;
+            }
         });
+
+
 
         String filePath = getIntent().getStringExtra("filePath");
         if (filePath != null) {
@@ -108,6 +131,81 @@ public class VideoPlayerActivity extends Activity {
 
         btnSwitchAudioTrack.setOnClickListener(v -> switchName());
         // 下一首按钮
+
+
+        switchOrientation = findViewById(R.id.switch_orientation);
+
+        // 初始化：根据当前方向设置状态
+        int orientation = getRequestedOrientation();
+        switchOrientation.setChecked(
+                orientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        );
+
+        switchOrientation.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            userLockedOrientation = true;   // ★ 用户接管
+
+            if (isChecked) {
+                setLandscape();
+            } else {
+                setPortrait();
+            }
+        });
+
+       /* switchOrientation.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                // 横屏
+                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+            } else {
+                // 竖屏
+                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+            }
+        });*/
+
+
+    }
+
+    // 是否已根据视频比例自动处理过
+    private boolean autoOrientationHandled = false;
+
+    // 用户是否手动锁定了方向
+    private boolean userLockedOrientation = false;
+    private void handleOrientationByRatio(int width, int height) {
+        if (width <= 0 || height <= 0) return;
+
+        // 用户手动切换过 → 不再自动
+        if (userLockedOrientation) return;
+
+        // 已自动处理过 → 不重复
+        if (autoOrientationHandled) return;
+
+        autoOrientationHandled = true;
+
+        float ratio = (float) width / height;
+
+        if (ratio >= 1.6f) {
+            setLandscape();
+            switchOrientation.setChecked(true);
+        } else {
+            setPortrait();
+            switchOrientation.setChecked(false);
+        }
+    }
+
+
+    private void setLandscape() {
+        if (getRequestedOrientation()
+                != ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) {
+
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        }
+    }
+
+    private void setPortrait() {
+        if (getRequestedOrientation()
+                != ActivityInfo.SCREEN_ORIENTATION_PORTRAIT) {
+
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        }
     }
 
     private void setRepeat() {
@@ -132,34 +230,29 @@ public class VideoPlayerActivity extends Activity {
     private void playVideo(int index) {
 
         if (index >= 0 && index < videoFiles.size()) {
+            autoOrientationHandled = false;   // ★ 必须重置
             File file = videoFiles.get(index);
             Media media = new Media(libVLC, Uri.fromFile(file));
             mediaPlayer.setMedia(media);
-
             media.release();
-
-
             mediaPlayer.play();
-
-
-
             // 播放时默认选择第二个音轨并隐藏字幕
             new android.os.Handler().postDelayed(() -> {
                 switchAudioTrack();
                 mediaPlayer.setSpuTrack(-1); // 不显示字幕
 
-                Log.d("TAG1", "mediaPlayer.getAudioTracksCount(): "+mediaPlayer.getAudioTracksCount());
+                Media.VideoTrack track = mediaPlayer.getCurrentVideoTrack();
+                if (track != null) {
+                    int w = track.width;
+                    int h = track.height;
+                    runOnUiThread(() -> handleOrientationByRatio(w, h));
+                }
+
                 if(mediaPlayer.getAudioTracksCount()<3) btnSwitchAudioTrack.setVisibility(View.GONE);
                 else btnSwitchAudioTrack.setVisibility(View.VISIBLE);
-
             }, 1000); // 延迟1秒执行
-
         }
 
-
-
-//        Log.d("TAG", "playVideo getTitle: "+mediaPlayer.getScale());
-//        Log.d("TAG", "playVideo getTitle: "+mediaPlayer.get);
     }
 
     private void playNextVideo() {
@@ -176,11 +269,11 @@ public class VideoPlayerActivity extends Activity {
 
     @SuppressLint("ResourceAsColor")
     private void switchName() {
+        this.btnRepeat.setVisibility(View.VISIBLE);
         if(btnSwitchAudioTrack.getText().equals("原唱"))
         {
             btnSwitchAudioTrack.setBackgroundColor(android.R.color.holo_blue_dark);
             btnSwitchAudioTrack.setText("伴唱");
-
         }else
         {
             btnSwitchAudioTrack.setText("原唱");

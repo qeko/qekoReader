@@ -139,7 +139,7 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
 
         // 置顶文件显示为红色
         if (item.isPinned()) {
-            holder.title.setTextColor(Color.RED);
+            holder.title.setTextColor(Color.BLUE);
             return;
         } else {
             holder.title.setTextColor(Color.BLACK);

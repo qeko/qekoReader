@@ -85,9 +85,6 @@ public class MainActivity extends Activity {
         btnScan.setOnClickListener(v ->startScan());
 //        btnScan.setOnClickListener(v -> scanDocuments());
 
-
-
-
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s,int st,int c,int a){}
             @Override public void onTextChanged(CharSequence s,int st,int b,int c){
@@ -237,6 +234,7 @@ public class MainActivity extends Activity {
         if (req == REQUEST_STORAGE_PERMISSION) {
             if (grants.length>0 && grants[0]==PackageManager.PERMISSION_GRANTED) {
                 // ok
+                startScan();  //首次扫描
             } else {
                 Toast.makeText(this,"未授予存储权限，无法扫描",Toast.LENGTH_SHORT).show();
             }
@@ -244,11 +242,11 @@ public class MainActivity extends Activity {
     }
 
     /** 扫描+分类 */
-    private void scanAndClassify() {
+/*    private void scanAndClassify() {
         File root = Environment.getExternalStorageDirectory();
         scanDirectoryRecursive(root, 0); // ← 这里也调用
         FileUtils.saveCategoryDirs(this, categoryDirs);
-    }
+    }*/
 
  /*   private void scanDocuments() {
         Toast.makeText(this, "正在扫描，请稍候...", Toast.LENGTH_SHORT).show();
