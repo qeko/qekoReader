@@ -32,14 +32,55 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
         void onItemClick(FileItem item);
     }
 
-    private List<FileItem> allItems = new ArrayList<>();
-    private List<FileItem> visibleItems = new ArrayList<>();
+    public List<FileItem> allItems = new ArrayList<>();
+    public List<FileItem> visibleItems = new ArrayList<>();
     private String searchKeyword = "";    // 当前搜索关键字
     private OnItemClickListener listener;
+
+    public String currentCategory = "NORMAL";
 
     public FileAdapter(List<FileItem> items) {
         this.allItems = items;
         refreshDisplayItems(); // 初始构建 visibleItems
+    }
+
+    public void setCategory(String category) {
+        this.currentCategory = category;
+        Log.d(TAG, "setCategory: "+this.currentCategory);
+        notifyDataSetChanged();
+    }
+
+    public boolean restoreAt(int pos) {
+        FileItem item = visibleItems.get(pos);
+        File f = item.getFile();
+        String name = f.getName();
+
+        if (!name.contains(".待删除")) {
+            notifyItemChanged(pos);
+            return false;
+        }
+
+        String originalName = name.substring(0, name.indexOf(".待删除"));
+        File restored = new File(f.getParent(), originalName);
+
+        boolean success = f.renameTo(restored);
+        if (success) {
+            visibleItems.remove(pos);
+            notifyItemRemoved(pos);
+        } else {
+            notifyItemChanged(pos);
+        }
+        return success;
+    }
+
+
+    public FileItem getFile(int pos) {
+        return visibleItems.get(pos);
+    }
+    public void refresh(List<FileItem> newFiles) {
+        visibleItems.clear();
+        visibleItems.addAll(newFiles);
+        notifyDataSetChanged();
     }
 
     public void setOnItemClickListener(OnItemClickListener l) {
@@ -223,94 +264,6 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
         visibleItems.remove(position);
         notifyItemRemoved(position);
     }
-
-/*
-    @Override
-    public void onBindViewHolder(@NonNull FileAdapter.ViewHolder holder, int position) {
-        FileItem item = visibleItems.get(position);
-        holder.bind(item, listener);
-
-        // 设置隔行背景色
-        int backgroundColor = (position % 2 == 0) ? Color.parseColor("#FFFFFF") : Color.parseColor("#F5F5F5");
-        holder.itemView.setBackgroundColor(backgroundColor);
-
-        // 选中项高亮
-        if (item.isLastRead()) {
-            holder.itemView.setBackgroundColor(Color.parseColor("#D0F0C0")); // 浅绿色
-        }
-
-        // ===== 显示文件名 =====
-        holder.title.setText(item.getFile().getName());
-
-        // ===== 置顶文件 =====
-        if (item.isPinned()) {
-            holder.title.setTextColor(Color.RED);
-//            holder.icon.setImageResource(R.drawable.ic_pin);
-            return; // 置顶的就不再判断类型，直接结束
-        } else {
-            holder.title.setTextColor(Color.BLACK);
-        }
-
-        // ===== 文件夹处理 =====
-        if (item.isFolder()) {
-            holder.icon.setImageResource(R.drawable.ic_folder_closed);
-            return;
-        }
-
-        // ===== 图片文件处理（缩略图） =====
-        String name = item.getFile().getName().toLowerCase();
-        if (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") ||
-                name.endsWith(".gif") || name.endsWith(".bmp") || name.endsWith(".webp")) {
-            Glide.with(holder.itemView.getContext())
-                    .load(item.getFile())
-                    .placeholder(R.drawable.ic_image_placeholder)
-                    .centerCrop()
-                    .into(holder.icon);
-            return;
-        }
-
-        // ===== 其他文件类型图标 =====
-        if (name.endsWith(".txt")) {
-            holder.icon.setImageResource(R.drawable.ic_file);
-        } else if (name.endsWith(".pdf")) {
-            holder.icon.setImageResource(R.drawable.ic_pdf);
-        } else if (name.endsWith(".epub")) {
-            holder.icon.setImageResource(R.drawable.ic_epub);
-        } else if (name.endsWith(".mobi") || name.endsWith(".azw") || name.endsWith(".azw3")) {
-            holder.icon.setImageResource(R.drawable.ic_ebook);
-        } else if (name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".flac")) {
-            holder.icon.setImageResource(R.drawable.ic_music);
-        } else if (name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".avi")) {
-            holder.icon.setImageResource(R.drawable.ic_video);
-        } else {
-            holder.icon.setImageResource(R.drawable.ic_file); // 默认
-        }
-
-// ===== 文件可用性（pdf/epub） =====
-        String absolutePath = item.getFile().getAbsolutePath();
-        if (absolutePath.toLowerCase().endsWith(".pdf")) {
-            File pdftxt = new File(absolutePath + ".pdftxt");
-            boolean enabled = pdftxt.exists();
-            holder.itemView.setEnabled(enabled);
-            holder.itemView.setAlpha(enabled ? 1.0f : 0.5f); // 灰显不可点
-        } else if (absolutePath.toLowerCase().endsWith(".epub")) {
-            File epubtxt = new File(absolutePath + ".epubtxt");
-            boolean enabled = epubtxt.exists();
-            holder.itemView.setEnabled(enabled);
-            holder.itemView.setAlpha(enabled ? 1.0f : 0.5f); // 灰显不可点
-        } else {
-            holder.itemView.setEnabled(true);
-            holder.itemView.setAlpha(1.0f);
-        }
-
-
-
-        // ===== 点击事件 =====
-        holder.itemView.setOnClickListener(v -> {
-            if (listener != null) listener.onItemClick(item);
-        });
-    }
-*/
 
 
 

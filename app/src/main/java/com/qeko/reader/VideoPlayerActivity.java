@@ -58,7 +58,7 @@ public class VideoPlayerActivity extends Activity {
 //        btnPlayPause = findViewById(R.id.btn_play_pause);
         btnRepeat = findViewById(R.id.btn_repeat);
         btnRepeat.setOnClickListener(v -> setRepeat());
-        btnRepeat.setTextColor(Color.GRAY);
+        btnRepeat.setTextColor(Color.BLUE);
         seekBar = findViewById(R.id.seekBar);
 
         libVLC = new LibVLC(this, new ArrayList<>());
@@ -161,7 +161,7 @@ public class VideoPlayerActivity extends Activity {
             }
         });*/
 
-
+        Log.d("TAG", "setRepeat: "+btnRepeat.getTextColors());
     }
 
     // 是否已根据视频比例自动处理过
@@ -181,8 +181,8 @@ public class VideoPlayerActivity extends Activity {
         autoOrientationHandled = true;
 
         float ratio = (float) width / height;
-
-        if (ratio >= 1.6f) {
+        Log.d("TAG", "handleOrientationByRatio: ="+ratio);
+        if (ratio >= 1.5f) {
             setLandscape();
             switchOrientation.setChecked(true);
         } else {
@@ -209,16 +209,16 @@ public class VideoPlayerActivity extends Activity {
     }
 
     private void setRepeat() {
-//        Log.d("TAG", "setRepeat: "+btnRepeat.getTextColors());
+
         if (btnRepeat.getTextColors().toString().indexOf("7829368")>0)
         {
-            this.btnRepeat.setTextColor(Color.RED);
+            this.btnRepeat.setTextColor(Color.BLUE);
         }else
         {
-            this.btnRepeat.setTextColor(Color.GRAY);
+            this.btnRepeat.setTextColor(Color.YELLOW);
         }
 
-//        Log.d("TAG", "setRepeat: "+btnRepeat.getTextColors());
+        Log.d("TAG", "setRepeat: "+btnRepeat.getTextColors());
     }
 
     private boolean isVideoFile(String name) {
@@ -256,13 +256,13 @@ public class VideoPlayerActivity extends Activity {
     }
 
     private void playNextVideo() {
-//        Log.d("TAG", "btnRepeat: "+btnRepeat.getTextColors());
+        Log.d("TAG", "btnRepeat: "+btnRepeat.getTextColors());
         if (btnRepeat.getTextColors().toString().indexOf("7829368")>0)
         {
             currentIndex = (currentIndex + 1) % videoFiles.size();
-            btnRepeat.setTextColor(Color.GRAY);
+            btnRepeat.setTextColor(Color.YELLOW);
         } else{
-            btnRepeat.setTextColor(Color.RED);
+            btnRepeat.setTextColor(Color.BLUE);
         }
         playVideo(currentIndex);
     }
@@ -366,7 +366,7 @@ public class VideoPlayerActivity extends Activity {
 
                     }
                     playVideo(currentIndex);
-                    btnRepeat.setTextColor(Color.GRAY);//使重唱无效
+                    btnRepeat.setTextColor(Color.BLUE);//使重唱无效
                     return true;
                 }
             }

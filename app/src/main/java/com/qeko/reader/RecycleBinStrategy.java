@@ -1,3 +1,4 @@
+
 package com.qeko.reader;
 
 import android.util.Log;
@@ -8,10 +9,10 @@ import java.io.File;
 import java.util.Locale;
 
 // BookFileStrategy.java
-public class BookFileStrategy implements FileTypeStrategy {
+public class RecycleBinStrategy implements FileTypeStrategy {
 
     private static final String[] EXTENSIONS = {
-            ".txt", ".pdf", ".epub", ".mobi", ".azw", ".azw3"
+           ".待删除"
     };
 
     @Override

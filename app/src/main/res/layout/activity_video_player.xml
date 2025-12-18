@@ -53,19 +53,18 @@
         android:id="@+id/btn_repeat"
         android:layout_width="70dp"
         android:layout_height="wrap_content"
-
-        android:layout_alignParentBottom="true"
-        android:layout_margin="1dp"
+        android:layout_margin="10dp"
+        android:text="重唱"
         android:background="@android:color/transparent"
-        android:text="🔄"
         android:textColor="#FF006F"
-        android:visibility="gone" />
+         />
+    <!--        android:background="@android:color/transparent"-->
     <!-- activity_video_player.xml -->
     <Switch
         android:id="@+id/switch_orientation"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="▭"
+        android:text=""
         android:checked="true"
         android:layout_alignParentRight="true"
         android:layout_margin="16dp"/>

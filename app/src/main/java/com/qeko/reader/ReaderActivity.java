@@ -91,7 +91,7 @@ public class ReaderActivity extends AppCompatActivity {
         settingsPanel = findViewById(R.id.settingsPanel);
         filePath = getIntent().getStringExtra("filePath");
         file = new File(filePath);
-
+                //是否可以在这抽取
 
         appPreferences = new AppPreferences(this);
         ttsManager.setSpeed(appPreferences.getSpeechRate());
@@ -135,6 +135,8 @@ public class ReaderActivity extends AppCompatActivity {
             openBook(file);           // 打开书本
             setupSettingButtons();    // 初始化按钮事件
         }, 2000);*/
+
+
     }
 
     private void setupSettingButtons() {
@@ -874,7 +876,7 @@ public class ReaderActivity extends AppCompatActivity {
 
         // 3. 可用宽度/高度
         int width = textView.getWidth() - textView.getPaddingLeft() - textView.getPaddingRight();
-        int height = textView.getHeight()  -600;
+        int height = textView.getHeight()  - 900;
         splitter.setPageWidth(width);
         splitter.setPageHeight(height);
 
