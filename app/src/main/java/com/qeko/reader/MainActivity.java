@@ -26,7 +26,7 @@ import androidx.recyclerview.widget.*;
 import com.qeko.utils.AppPreferences;
 import com.qeko.utils.FileAdapter;
 import com.qeko.utils.FileItem;
-import com.qeko.utils.FileScanner;
+
 import com.qeko.utils.FileUtils;
 
 import java.io.File;
@@ -75,7 +75,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        appPreferences = new AppPreferences(this);
         // init UI
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -130,19 +130,56 @@ public class MainActivity extends Activity {
 //        btnRecyclebin.setOnClickListener(v -> switchCategory("RECYCLE_BIN"));
         btnRecyclebin.setOnClickListener(v -> {
             switchCategory("RECYCLE_BIN");
-            adapter.setCategory("RECYCLE_BIN");
+//            adapter.setCategory("RECYCLE_BIN");
             adapter.notifyDataSetChanged();
+
+
+                if (!adapter.visibleItems.isEmpty()) {
+                    btnClearAll.setVisibility(View.VISIBLE);
+                }else
+                {
+                    btnClearAll.setVisibility(View.GONE);
+                }
+
 
 //            btnClearAll.setVisibility(View.VISIBLE); // 👈 显示清空
         });
 
         btnClearAll.setOnClickListener(v -> {
-            //真的清空回收站
-            for (FileItem f : adapter.visibleItems) {
-                f.getFile().delete();
+/*
+            if (!"RECYCLE_BIN".equals(adapter.currentCategory)) {
+                Toast.makeText(this, "仅能在回收站中清空", Toast.LENGTH_SHORT).show();
+                return;
             }
-            adapter.notifyDataSetChanged();
+            if (adapter.visibleItems.isEmpty()) {
+                Toast.makeText(this, "回收站为空", Toast.LENGTH_SHORT).show();
+                return;
+            }
+*/
+           new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle("清空回收站")
+                    .setMessage("确定永久删除？")
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .setPositiveButton("确定", (dialog, which) -> {
+
+                        // ✅ 真正清空
+                        Iterator<FileItem> it = adapter.visibleItems.iterator();
+                        while (it.hasNext()) {
+                            FileItem item = it.next();
+                            File f = item.getFile();
+                            if (f.exists()) {
+                                f.delete();
+                            }
+                            it.remove();
+                        }
+
+                        adapter.notifyDataSetChanged();
+                        Toast.makeText(this, "回收站已清空", Toast.LENGTH_SHORT).show();
+                    })
+                    .setNegativeButton("取消", null)
+                    .show();
         });
+
 
         btnScan.setOnClickListener(v ->startScan());
 //        btnScan.setOnClickListener(v -> scanDocuments());
@@ -432,7 +469,11 @@ public class MainActivity extends Activity {
                 if (!hasImage && ImageFileStrategy.acceptName(name)) hasImage = true;
                 if (!hasMusic && MusicFileStrategy.acceptName(name)) hasMusic = true;
                 if (!hasVideo && VideoFileStrategy.acceptName(name)) hasVideo = true;
-                if (!hasRecyclebin && RecycleBinStrategy.acceptName(name)) hasRecyclebin = true;
+                if (!hasRecyclebin && RecycleBinStrategy.acceptName(name))
+                {
+                    hasRecyclebin = true;
+                    Log.d(TAG, "  -> accepted as RECYCLE_BIN");
+                }
             }
         }
 
@@ -440,7 +481,7 @@ public class MainActivity extends Activity {
         if (hasImage) categoryDirs.add("IMAGE_DIRS", dir);
         if (hasMusic) categoryDirs.add("MUSIC_DIRS", dir);
         if (hasVideo) categoryDirs.add("VIDEO_DIRS", dir);
-        if (hasVideo) categoryDirs.add("RECYCLE_BIN", dir);
+        if (hasRecyclebin) categoryDirs.add("RECYCLE_BIN", dir);
 
         for (File f : files) {
             if (f.isDirectory()) {

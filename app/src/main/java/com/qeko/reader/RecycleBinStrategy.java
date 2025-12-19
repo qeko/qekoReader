@@ -18,6 +18,7 @@ public class RecycleBinStrategy implements FileTypeStrategy {
     @Override
     public boolean accept(File file) {
         if (file == null || !file.isFile()) return false;
+
         return acceptName(file.getName());
     }
 

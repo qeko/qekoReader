@@ -76,7 +76,7 @@
                 android:id="@+id/etSearch"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:hint="文件名"
+                android:hint="搜索"
                 android:paddingLeft="12dp"
                 android:paddingRight="36dp"
                 android:background="@android:drawable/editbox_background_normal"
@@ -110,8 +110,8 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:background="@android:color/transparent"
-            android:text="🔄"
-            android:textSize="20sp" />
+            android:text="🔄刷新"
+            android:textSize="14sp" />
 
 
 
@@ -122,8 +122,8 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:background="@android:color/transparent"
-            android:text="📦"
-            android:textSize="20sp" />
+            android:text="📦大文件"
+            android:textSize="10sp" />
 
         <!-- 新文件 -->
         <Button
@@ -132,8 +132,8 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:background="@android:color/transparent"
-            android:text="📅"
-            android:textSize="20sp" />
+            android:text="📅新文件"
+            android:textSize="10sp" />
 
         <!-- 回收站 -->
         <Button
@@ -143,16 +143,16 @@
             android:layout_weight="1"
             android:background="@android:color/transparent"
             android:text="🗑"
-            android:textSize="20sp" />
+            android:textSize="24sp" />
         <Button
             android:id="@+id/btnClearAll"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:background="@android:color/transparent"
-            android:text="❌"
+            android:text="🧹清空"
             android:visibility="gone"
-            android:textSize="20sp" />
+            android:textSize="14sp" />
 
 
 
